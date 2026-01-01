@@ -3,59 +3,115 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JINSUL - Professional Consulting System</title>
+    <title>JINSUL - Integrated Consulting System</title>
     <style>
-        :root { --primary: #0052cc; --accent: #d73a49; }
-        
-        /* 1. 디자인 레이아웃 및 워터마크 */
-        body { 
-            margin: 0; background-color: #f8f9fa; color: #172b4d; 
-            font-family: 'Pretendard', sans-serif; position: relative; min-height: 100vh;
+        /* [UI 가이드라인 반영] 
+           1. Glassmorphism: opacity 0.0, backdrop-filter blur(1px)
+           2. Color: Minimalist Grey & White
+           3. Layout: Centered 
+        */
+        :root { 
+            --primary-grey: #444444; 
+            --accent-red: #d73a49;
+            --border-light: rgba(0, 0, 0, 0.1);
         }
         
-        /* 중앙 워터마크 */
+        body { 
+            margin: 0; 
+            background-color: #ffffff; 
+            color: #333333; 
+            font-family: 'Pretendard', sans-serif; 
+            position: relative; 
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center; /* 중앙 정렬 */
+        }
+        
+        /* 중앙 워터마크 로고 */
         .watermark {
             position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
             width: 60%; opacity: 0.08; z-index: -1; pointer-events: none; filter: grayscale(1);
         }
 
-        header { padding: 30px; text-align: center; border-bottom: 1px solid rgba(0,0,0,0.05); }
-        .top-logo { width: 220px; filter: grayscale(1); margin-bottom: 10px; }
+        header { 
+            width: 100%; 
+            padding: 40px 0; 
+            text-align: center; 
+            background: transparent;
+        }
+        
+        /* 로고 상단 색상 및 크기 보정 */
+        .top-logo { 
+            width: 240px; 
+            filter: grayscale(1); /* 그레이 톤 유지 */
+            opacity: 0.8;
+            margin-bottom: 10px; 
+        }
 
-        .container { max-width: 1200px; margin: 0 auto; padding: 20px; display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
+        .container { 
+            width: 1200px; /* 고정폭 중앙 정렬 */
+            max-width: 95%;
+            margin: 0 auto; 
+            display: grid; 
+            grid-template-columns: 1.8fr 1.2fr; 
+            gap: 30px; 
+            padding-bottom: 100px;
+        }
 
-        /* 2. 표 및 카드 100% 투명 설정 (Blur 효과로 가독성 유지) */
+        /* 2. 카드 및 표: 투명도 0.0 (Glassmorphism) */
         .card { 
-            background: rgba(255, 255, 255, 0); /* 완전 투명 */
-            border: 1px solid rgba(0,0,0,0.1); border-radius: 15px; padding: 25px; 
-            backdrop-filter: blur(2px); margin-bottom: 20px;
+            background: rgba(255, 255, 255, 0); /* 100% 투명 */
+            border: 1px solid var(--border-light); 
+            border-radius: 12px; 
+            padding: 30px; 
+            backdrop-filter: blur(1px); /* 요청하신 블러 효과 */
+            margin-bottom: 20px;
         }
 
         table { width: 100%; border-collapse: collapse; background: transparent !important; }
-        th { background: rgba(0,0,0,0.05); padding: 12px; text-align: left; font-size: 0.85em; }
-        td { padding: 10px; border-bottom: 1px solid rgba(0,0,0,0.05); background: transparent !important; }
+        th { border-bottom: 2px solid #eee; padding: 12px; text-align: left; font-size: 0.8em; color: #888; }
+        td { padding: 12px; border-bottom: 1px solid #eee; background: transparent !important; }
 
-        input { 
-            background: rgba(255, 255, 255, 0.4); 
-            border: 1px solid rgba(0, 0, 0, 0.1); 
-            padding: 8px; border-radius: 6px; width: 100%; 
+        input, select { 
+            background: rgba(255, 255, 255, 0.2); 
+            border: 1px solid #ddd; 
+            padding: 10px; border-radius: 6px; width: 100%; 
+            color: #333;
         }
 
-        /* 목표가 박스 */
-        .target-box { background: var(--primary); color: white; padding: 35px; border-radius: 20px; text-align: center; }
-        .target-input { font-size: 2.8em; width: 200px; background: none; border: none; border-bottom: 3px solid white; color: white; text-align: right; font-weight: 800; outline: none; }
+        /* 목표가 박스 색상 수정 (지나치게 튀는 색 제거) */
+        .target-box { 
+            background: rgba(0, 0, 0, 0.03); 
+            border: 1px solid var(--border-light);
+            color: var(--primary-grey); 
+            padding: 40px; border-radius: 15px; text-align: center; 
+        }
+        .target-input { 
+            font-size: 3em; width: 220px; background: none; border: none; 
+            border-bottom: 3px solid var(--primary-grey); color: var(--primary-grey); 
+            text-align: right; font-weight: 900; outline: none; 
+        }
 
-        /* 3. 하단 카피라이트 */
-        footer { text-align: center; padding: 60px 0; color: #888; font-size: 0.9em; font-weight: 600; line-height: 1.6; }
+        /* 3. 하단 카피라이트 스타일 보정 */
+        footer { 
+            width: 100%;
+            text-align: center; 
+            padding: 40px 0; 
+            color: #aaaaaa; 
+            font-size: 0.85em; 
+            font-weight: 500; 
+            letter-spacing: 0.5px;
+            margin-top: auto;
+        }
 
-        /* 로딩 창 */
+        .btn { padding: 15px 25px; border-radius: 8px; border: 1px solid #ddd; font-weight: 700; cursor: pointer; transition: 0.2s; }
+        .btn-main { background: #333; color: white; width: 100%; margin-top: 20px; font-size: 1.1em; border: none; }
+        .btn-main:hover { background: #000; }
+        .lock-btn { background: none; border: none; font-size: 1.2em; cursor: pointer; opacity: 0.2; }
+        .lock-btn.active { opacity: 1; color: var(--accent-red); }
+
         #loader { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 10000; }
-        .error-log { color: red; font-size: 0.8em; margin-top: 15px; max-width: 80%; text-align: center; line-height: 1.4; }
-        
-        .btn { padding: 12px 20px; border-radius: 8px; border: none; font-weight: 700; cursor: pointer; }
-        .btn-main { background: var(--primary); color: white; width: 100%; margin-top: 20px; font-size: 1.1em; }
-        .lock-btn { background: none; border: none; font-size: 1.2em; cursor: pointer; opacity: 0.3; }
-        .lock-btn.active { opacity: 1; color: var(--accent); }
     </style>
 </head>
 <body>
@@ -63,24 +119,23 @@
 <img src="https://raw.githubusercontent.com/jinsul-lab/openteam/main/jinsul-logo.png" class="watermark" onerror="this.style.display='none'">
 
 <div id="loader">
-    <div style="font-weight: 900; font-size: 1.5em; color: var(--primary); margin-bottom: 10px;">JINSUL ENGINE STARTING...</div>
-    <div id="statusText">데이터를 안전하게 불러오는 중입니다.</div>
-    <div id="errorLog" class="error-log"></div>
+    <div style="font-weight: 900; font-size: 1.2em; color: #333; margin-bottom: 10px; letter-spacing: 2px;">JINSUL DATA LOADING...</div>
+    <div id="statusText" style="font-size: 0.8em; color: #888;">데이터를 불러오는 중입니다.</div>
 </div>
 
 <header>
     <img src="https://raw.githubusercontent.com/jinsul-lab/openteam/main/jinsul-logo.png" class="top-logo" alt="JINSUL">
-    <div style="font-weight: 700; color: var(--primary); letter-spacing: -0.5px;">통합 수가 컨설팅 시스템</div>
+    <div style="font-weight: 400; font-size: 0.9em; color: #888; letter-spacing: 3px;">INTEGRATED CASE VERIFICATION</div>
 </header>
 
 <div class="container">
     <div class="main-content">
         <div class="card">
             <div style="display: flex; gap: 10px; margin-bottom: 25px;">
-                <select id="bundleSelect" style="flex: 1; padding: 12px; border-radius: 10px; border: 1px solid #ddd; font-weight: 700; background: rgba(255,255,255,0.6);">
-                    <option value="">-- 불러올 묶음코드를 선택하세요 (code.xls) --</option>
+                <select id="bundleSelect" style="flex: 1; font-weight: 700;">
+                    <option value="">-- 불러올 묶음코드를 선택하세요 --</option>
                 </select>
-                <button class="btn" onclick="loadBundle()" style="background: #eee;">데이터 로드</button>
+                <button class="btn" onclick="loadBundle()">데이터 로드</button>
             </div>
 
             <table>
@@ -101,36 +156,35 @@
 
     <div class="sidebar">
         <div class="target-box">
-            <div style="font-size: 0.9em; opacity: 0.9; margin-bottom: 10px;">🎯 목표 수납액</div>
+            <div style="font-size: 0.8em; color: #888; margin-bottom: 10px; font-weight: 600;">TARGET PAYMENT</div>
             <input type="number" id="targetPrice" class="target-input" value="89000"> <span style="font-weight: 800; font-size: 1.2em;">원</span>
-            <div style="margin-top: 20px;">
-                <select id="seniorMode" onchange="calculate()" style="width: 100%; padding: 10px; border: none; border-radius: 8px; font-weight: 700; background: white; color: var(--primary);">
+            <div style="margin-top: 25px;">
+                <select id="seniorMode" onchange="calculate()" style="font-weight: 700;">
                     <option value="normal">일반 외래 (30%)</option>
                     <option value="senior">노인 (65세 이상)</option>
                 </select>
             </div>
         </div>
 
-        <div class="card" style="text-align: center; margin-top: 20px; border: 2px solid var(--primary);">
-            <div style="font-size: 0.9em; color: #666; margin-bottom: 5px;">현재 수납 예상액</div>
-            <div id="finalPayment" style="font-size: 3.2em; font-weight: 900; color: var(--accent); letter-spacing: -1.5px;">0</div>
-            <div style="margin-top: 10px; font-size: 0.9em; color: #444; border-top: 1px solid #eee; padding-top: 10px;">
-                본인부담금: <span id="benefitPay" style="font-weight: 700;">0</span>원
+        <div class="card" style="text-align: center; margin-top: 20px; border-top: 4px solid #333;">
+            <div style="font-size: 0.8em; color: #888; margin-bottom: 10px; font-weight: 600;">TOTAL ESTIMATED</div>
+            <div id="finalPayment" style="font-size: 3.5em; font-weight: 900; color: #333; letter-spacing: -2px;">0</div>
+            <div style="margin-top: 15px; font-size: 0.9em; color: #888;">
+                본인부담: <span id="benefitPay" style="font-weight: 700; color: #333;">0</span>원
             </div>
         </div>
     </div>
 </div>
 
 <footer>
-    © JINSUL. All Rights Reserved. <br>
-    <span style="opacity: 0.7; font-size: 0.85em; font-weight: 400; letter-spacing: 1px;">EXPERIENCE & VALUE REALIZATION</span>
+    © JINSUL INTEGRATED SYSTEM. ALL RIGHTS RESERVED.<br>
+    <span style="opacity: 0.5; font-size: 0.9em; letter-spacing: 1px;">EXPERIENCE & VALUE REALIZATION</span>
 </footer>
 
 <script>
-    // 깃허브 저장소 정보 (0101 버전 반영)
     const REPO_URL = "https://raw.githubusercontent.com/jinsul-lab/openteam/main/";
     const FILES = [
-        "의치과수가(20260101).csv", // 사용자 요청 반영 (0103 -> 0101)
+        "의치과수가(20260101).csv",
         "약가(20260101).csv",
         "치료재료대(20250401).csv",
         "code.xls"
@@ -141,17 +195,11 @@
 
     async function init() {
         const status = document.getElementById('statusText');
-        const errorLog = document.getElementById('errorLog');
-        
         try {
             for (const file of FILES) {
                 status.innerText = `${file} 동기화 중...`;
-                // encodeURIComponent를 사용하여 괄호와 공백이 포함된 파일명 안전하게 처리
                 const res = await fetch(REPO_URL + encodeURIComponent(file));
-                
-                if (!res.ok) {
-                    throw new Error(`[파일 로드 실패] ${file}\n원인: 깃허브 서버 응답 없음 (파일명 대소문자나 브랜치명을 확인하세요)`);
-                }
+                if (!res.ok) throw new Error(`로드 실패: ${file}`);
 
                 const arrayBuffer = await res.arrayBuffer();
                 const text = new TextDecoder('euc-kr').decode(arrayBuffer);
@@ -165,8 +213,7 @@
             document.getElementById('loader').style.display = 'none';
             renderOptions();
         } catch (e) {
-            status.innerText = "❌ 시스템 초기화 실패";
-            errorLog.innerText = e.message;
+            status.innerText = "❌ 데이터 로딩 에러";
             console.error(e);
         }
     }
@@ -210,7 +257,7 @@
         for (let code in bundles) {
             const opt = document.createElement('option');
             opt.value = code;
-            opt.innerText = `[${code}] ${bundles[code].name}`;
+            opt.innerText = `[세트] ${bundles[code].name}`;
             select.appendChild(opt);
         }
     }
@@ -225,8 +272,8 @@
             const tr = document.createElement('tr');
             tr.dataset.type = item.type;
             tr.innerHTML = `
-                <td style="font-weight:700; color:#42526e;">${item.code}</td>
-                <td><input type="text" value="${item.name || info.name}" style="background:transparent; border:none; font-weight:500;"></td>
+                <td style="font-weight:700; color:#666;">${item.code}</td>
+                <td><input type="text" value="${item.name || info.name}" style="background:transparent; border:none;"></td>
                 <td><input type="number" class="price" value="${info.price}" oninput="calculate()"></td>
                 <td><input type="number" class="qty" value="${item.qty}" step="0.01" oninput="calculate()"></td>
                 <td><button class="lock-btn ${item.type==='benefit'?'active':''}" onclick="this.classList.toggle('active')">${item.type==='benefit'?'🔒':'🔓'}</button></td>
@@ -250,8 +297,7 @@
         if (senior) {
             if (bSum <= 15000) bPay = 1500;
             else if (bSum <= 20000) bPay = bSum * 0.1;
-            else if (bSum <= 25000) bPay = bSum * 0.2;
-            else bPay = bSum * 0.3;
+            else bPay = bSum * 0.2;
         }
         const finalB = Math.floor(bPay / 10) * 10;
         const total = Math.floor((finalB + nbSum) / 100) * 100;
@@ -269,7 +315,7 @@
         const nbRows = Array.from(document.querySelectorAll('tr[data-type="nonbenefit"]'));
         const adjustable = nbRows.filter(r => !r.querySelector('.lock-btn').classList.contains('active'));
 
-        if (adjustable.length === 0) return alert("단가를 조정할 비급여 항목의 잠금(🔓)을 풀어주세요.");
+        if (adjustable.length === 0) return alert("비급여 항목의 잠금을 풀어주세요.");
 
         const targetRow = adjustable[0];
         const qty = parseFloat(targetRow.querySelector('.qty').value) || 1;
