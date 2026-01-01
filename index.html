@@ -2,87 +2,142 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>JINSUL - Professional Consulting System</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JINSUL - Integrated Consulting System</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
-        :root { --blue: #0052cc; --gray: #f4f5f7; --text: #172b4d; }
-        body { font-family: 'Pretendard', sans-serif; margin: 0; background: #fafbfc; color: var(--text); }
-        header { background: white; padding: 20px; border-bottom: 1px solid #ddd; text-align: center; }
-        .container { max-width: 1100px; margin: 30px auto; padding: 0 20px; }
-        .card { background: white; border-radius: 12px; padding: 25px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        :root { 
+            --primary: #0052cc; 
+            --accent: #d73a49;
+            --bg: #f8f9fa; 
+            --card: #ffffff;
+            --text: #172b4d;
+            --border: #dfe1e6;
+        }
         
-        /* Dashboard Styling */
-        .dashboard { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
-        .target-box { background: var(--blue); color: white; padding: 30px; border-radius: 15px; text-align: center; }
-        .target-input { font-size: 2.5em; width: 180px; background: none; border: none; border-bottom: 3px solid white; color: white; text-align: right; outline: none; font-weight: 800; }
+        * { box-sizing: border-box; font-family: 'Inter', -apple-system, sans-serif; }
+        body { margin: 0; background: var(--bg); color: var(--text); line-height: 1.5; }
         
-        /* Table Styling */
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-        th { background: var(--gray); padding: 12px; text-align: left; font-size: 0.85em; }
-        td { padding: 10px; border-bottom: 1px solid #eee; }
-        input[type="number"], input[type="text"] { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
+        /* Layout */
+        header { background: white; padding: 20px; border-bottom: 2px solid var(--primary); text-align: center; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .container { max-width: 1200px; margin: 30px auto; padding: 0 20px; display: grid; grid-template-columns: 2fr 1fr; gap: 25px; }
         
-        .btn { padding: 12px 25px; border-radius: 8px; border: none; font-weight: 700; cursor: pointer; transition: 0.2s; }
-        .btn-primary { background: var(--blue); color: white; width: 100%; font-size: 1.1em; }
-        .status { font-size: 0.9em; color: #666; margin-top: 10px; text-align: center; }
-        .result-area { font-size: 3em; font-weight: 900; color: #d73a49; }
-        .lock-btn { background: none; border: none; cursor: pointer; font-size: 1.2em; opacity: 0.5; }
-        .lock-btn.active { opacity: 1; color: red; }
+        /* Card & UI */
+        .card { background: var(--card); border-radius: 16px; padding: 25px; border: 1px solid var(--border); box-shadow: 0 4px 20px rgba(0,0,0,0.03); }
+        h2 { margin-top: 0; font-size: 1.2em; font-weight: 700; color: var(--primary); }
+        
+        /* Target Price Box */
+        .target-box { background: linear-gradient(135deg, var(--primary), #0747a6); color: white; padding: 35px; border-radius: 20px; text-align: center; }
+        .target-input { font-size: 3em; width: 220px; background: none; border: none; border-bottom: 4px solid rgba(255,255,255,0.4); color: white; text-align: right; outline: none; font-weight: 900; margin-bottom: 10px; }
+        .target-input:focus { border-bottom-color: white; }
+        
+        /* Table Controls */
+        .controls { display: flex; gap: 10px; margin-bottom: 15px; }
+        select, input[type="text"], input[type="number"] { padding: 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 0.95em; }
+        .bundle-select { flex: 1; font-weight: 700; background-color: #f4f5f7; }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th { background: #f4f5f7; padding: 12px; text-align: left; font-size: 0.8em; color: #6b778c; text-transform: uppercase; border-bottom: 2px solid var(--border); }
+        td { padding: 12px; border-bottom: 1px solid var(--border); }
+        
+        .item-code { font-weight: 700; color: #42526e; }
+        .price-input, .qty-input { text-align: right; width: 100%; }
+
+        /* Buttons */
+        .btn { padding: 12px 20px; border-radius: 10px; border: none; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+        .btn-main { background: var(--primary); color: white; width: 100%; font-size: 1.1em; margin-top: 15px; }
+        .btn-main:hover { background: #0747a6; transform: translateY(-2px); }
+        .btn-add { background: #ebecf0; color: #42526e; flex: 1; margin-top: 10px; }
+        
+        .lock-btn { background: none; border: none; font-size: 1.3em; cursor: pointer; opacity: 0.3; }
+        .lock-btn.active { opacity: 1; color: var(--accent); }
+        
+        /* Result Area */
+        .result-title { font-size: 0.9em; color: #6b778c; margin-bottom: 5px; }
+        .result-val { font-size: 3.5em; font-weight: 900; color: var(--accent); letter-spacing: -2px; }
+        
+        #loadingOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 1000; }
+        .spinner { border: 4px solid #f3f3f3; border-top: 4px solid var(--primary); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
 
+<div id="loadingOverlay">
+    <div class="spinner"></div>
+    <p id="loadText" style="margin-top:20px; font-weight:700;">GitHub에서 마스터 데이터를 동기화 중...</p>
+</div>
+
 <header>
-    <h1 style="margin:0; font-size: 1.5em; letter-spacing: -1px;">JINSUL CONSULTING</h1>
-    <div id="loadingStatus" class="status">데이터 로딩 중... (GitHub 연결 중)</div>
+    <div style="font-weight: 900; font-size: 1.8em; color: var(--primary);">JINSUL</div>
+    <div style="font-size: 0.9em; font-weight: 600; color: #6b778c;">Value-added Healthcare Consulting System</div>
 </header>
 
 <div class="container">
-    <div class="dashboard">
-        <div>
-            <div class="card">
-                <div style="display: flex; gap: 10px; margin-bottom: 15px;">
-                    <select id="bundleSelect" style="flex:1; padding: 12px; border-radius: 8px; border: 1px solid #ddd; font-weight: 700;">
-                        <option value="">-- 묶음코드를 선택하세요 (최신 처방세트) --</option>
-                    </select>
-                    <button class="btn" onclick="loadBundle()" style="background: #ebecf0;">세트 로드</button>
-                </div>
+    <div class="work-area">
+        <div class="card">
+            <h2>처방 구성 및 수가 설정</h2>
+            <div class="controls">
+                <select id="bundleSelect" class="bundle-select">
+                    <option value="">-- 불러올 묶음코드를 선택하세요 --</option>
+                </select>
+                <button class="btn" onclick="loadBundle()">로드</button>
+            </div>
 
-                <table>
-                    <thead>
-                        <tr>
-                            <th style="width:15%">코드</th>
-                            <th>항목명</th>
-                            <th style="width:15%">단가</th>
-                            <th style="width:10%">수량</th>
-                            <th style="width:8%">고정</th>
-                        </tr>
-                    </thead>
-                    <tbody id="itemList">
-                        </tbody>
-                </table>
-                <button class="btn btn-primary" style="margin-top:20px;" onclick="autoBalance()">자동 역산 실행 (Goal Seek)</button>
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 15%;">코드</th>
+                        <th>항목명</th>
+                        <th style="width: 18%;">단가</th>
+                        <th style="width: 12%;">수량</th>
+                        <th style="width: 8%;">고정</th>
+                        <th style="width: 5%;"></th>
+                    </tr>
+                </thead>
+                <tbody id="itemList">
+                    </tbody>
+            </table>
+
+            <div style="display: flex; gap: 10px;">
+                <button class="btn btn-add" onclick="addRow('benefit')">+ 급여 추가</button>
+                <button class="btn btn-add" onclick="addRow('nonbenefit')">+ 비급여 추가</button>
+            </div>
+            
+            <button class="btn btn-main" onclick="autoBalance()">자동 역산 (Goal Seek) 실행</button>
+        </div>
+    </div>
+
+    <div class="side-area">
+        <div class="target-box">
+            <div style="font-size: 0.9em; opacity: 0.8; margin-bottom: 10px;">🎯 목표 수납액 설정</div>
+            <div>
+                <input type="number" id="targetPrice" class="target-input" value="89000" oninput="calculate()">
+                <span style="font-size: 1.5em; font-weight: 800;">원</span>
+            </div>
+            <div style="margin-top: 20px;">
+                <select id="seniorMode" onchange="calculate()" style="width: 100%; padding: 8px; border-radius: 8px; border: none; font-weight: 700;">
+                    <option value="normal">일반 외래 (30%)</option>
+                    <option value="senior">노인 (65세 이상)</option>
+                </select>
             </div>
         </div>
 
-        <div>
-            <div class="target-box">
-                <div style="opacity:0.8; margin-bottom:10px;">🎯 목표 수납액</div>
-                <div><input type="number" id="targetPrice" class="target-input" value="89000"> 원</div>
-                <div style="margin-top:20px;">
-                    <select id="seniorMode" onchange="calculate()" style="padding: 5px; border-radius: 5px;">
-                        <option value="normal">일반 외래 (30%)</option>
-                        <option value="senior">노인 (65세 이상)</option>
-                    </select>
+        <div class="card" style="margin-top: 20px; text-align: center;">
+            <div class="result-title">현재 최종 수납액</div>
+            <div id="finalPayment" class="result-val">0</div>
+            <div style="font-size: 1.5em; font-weight: 800; color: var(--accent); display: inline;">원</div>
+            
+            <hr style="margin: 20px 0; border: 0; border-top: 1px solid var(--border);">
+            
+            <div style="text-align: left; font-size: 0.95em;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                    <span>급여 본인부담금</span>
+                    <span id="benefitPay" style="font-weight: 700;">0</span>
                 </div>
-            </div>
-
-            <div class="card" style="text-align: center; margin-top: 20px;">
-                <div style="color: #666; font-size: 0.9em;">현재 환자 수납액</div>
-                <div id="finalPayment" class="result-area">0 원</div>
-                <hr>
-                <div style="text-align: left; font-size: 0.85em; line-height: 1.6;">
-                    • 본인부담금: <span id="benefitPay">0</span>원<br>
-                    • 비급여 총액: <span id="nonBenefitPay">0</span>원
+                <div style="display: flex; justify-content: space-between;">
+                    <span>비급여 합계</span>
+                    <span id="nonBenefitPay" style="font-weight: 700;">0</span>
                 </div>
             </div>
         </div>
@@ -90,11 +145,10 @@
 </div>
 
 <script>
-    // 1. 저장소 이름 수정 (opneteam -> openteam)
+    // 깃허브 저장소 정보 (오타 수정됨)
     const REPO_BASE = "https://raw.githubusercontent.com/jinsul-lab/openteam/main/";
-    
     const MASTER_FILES = [
-        "의치과수가(20260103).csv", 
+        "의치과수가(20260103).csv",
         "약가(20260101).csv",
         "치료재료대(20251201).csv"
     ];
@@ -103,30 +157,33 @@
     let masterDB = {};
     let bundles = {};
 
+    // 초기화: 데이터 로드
     async function init() {
-        const statusEl = document.getElementById('loadingStatus');
+        const loadText = document.getElementById('loadText');
         try {
-            statusEl.innerText = "🚀 GitHub 서버에서 마스터 데이터를 동기화 중...";
-            
-            // 한글 깨짐 방지를 위해 인코딩 처리(EUC-KR) 포함 로드
+            // 1. 마스터 데이터 로드 (EUC-KR 대응)
             for (const file of MASTER_FILES) {
+                loadText.innerText = `${file} 로딩 중...`;
                 await loadCSV(file);
             }
+            
+            // 2. 묶음코드 데이터 로드
+            loadText.innerText = `처방 세트 데이터 구성 중...`;
             await loadBundleCSV(BUNDLE_FILE);
 
-            statusEl.innerText = `✅ 로드 완료: 수가(${Object.keys(masterDB).length}건), 세트(${Object.keys(bundles).length}건)`;
+            // 3. 완료 처리
+            document.getElementById('loadingOverlay').style.display = 'none';
             renderBundleOptions();
         } catch (e) {
             console.error(e);
-            statusEl.innerText = "❌ 데이터 로딩 실패! (파일 이름이나 대소문자를 확인해 주세요)";
+            loadText.innerHTML = "❌ 데이터를 불러오지 못했습니다.<br>파일명과 깃허브 주소를 확인해주세요.";
         }
     }
 
     async function loadCSV(fileName) {
         const res = await fetch(REPO_BASE + encodeURIComponent(fileName));
-        if (!res.ok) throw new Error(`${fileName}을 찾을 수 없습니다.`);
+        if (!res.ok) return;
         
-        // 핵심: 한글 깨짐 방지를 위한 디코더 사용
         const arrayBuffer = await res.arrayBuffer();
         const decoder = new TextDecoder('euc-kr');
         const text = decoder.decode(arrayBuffer);
@@ -134,12 +191,11 @@
         const rows = text.split('\n').slice(1);
         rows.forEach(row => {
             const cols = row.split(',');
-            const id = cols[0]?.trim().toUpperCase();
-            if(id) {
-                masterDB[id] = {
-                    name: cols[3] || cols[1] || "명칭 없음",
-                    price: parseInt(cols[7]) || parseInt(cols[4]) || 0,
-                    type: row.includes('비급여') ? 'nonbenefit' : 'benefit'
+            const code = cols[0]?.trim().toUpperCase();
+            if(code) {
+                masterDB[code] = {
+                    name: cols[3]?.trim() || cols[1]?.trim() || "이름없음",
+                    price: parseInt(cols[7]) || parseInt(cols[4]) || 0
                 };
             }
         });
@@ -147,6 +203,8 @@
 
     async function loadBundleCSV(fileName) {
         const res = await fetch(REPO_BASE + encodeURIComponent(fileName));
+        if (!res.ok) return;
+
         const arrayBuffer = await res.arrayBuffer();
         const decoder = new TextDecoder('euc-kr');
         const text = decoder.decode(arrayBuffer);
@@ -155,10 +213,10 @@
         rows.forEach(row => {
             const cols = row.split(',');
             const bCode = cols[0]?.trim();
-            if(bCode && bCode !== "") {
+            if(bCode) {
                 if(!bundles[bCode]) bundles[bCode] = { name: cols[1], items: [] };
                 const subCode = cols[3]?.trim().toUpperCase();
-                if(subCode && subCode !== "ID" && subCode !== "하위코드") {
+                if(subCode && subCode !== "ID") {
                     bundles[bCode].items.push({
                         code: subCode,
                         name: cols[4],
@@ -169,7 +227,121 @@
             }
         });
     }
-    // ... (이후 렌더링 및 계산 함수는 동일)
+
+    function renderBundleOptions() {
+        const select = document.getElementById('bundleSelect');
+        for(let code in bundles) {
+            const opt = document.createElement('option');
+            opt.value = code;
+            opt.innerText = `[세트] ${bundles[code].name}`;
+            select.appendChild(opt);
+        }
+    }
+
+    function addRow(type, code="", name="", price=0, qty=1) {
+        const list = document.getElementById('itemList');
+        const tr = document.createElement('tr');
+        tr.className = 'item-row';
+        tr.dataset.type = type;
+        
+        tr.innerHTML = `
+            <td class="item-code"><input type="text" value="${code}" onchange="lookup(this)"></td>
+            <td><input type="text" value="${name}" class="name-input"></td>
+            <td><input type="number" class="price-input" value="${price}" oninput="calculate()"></td>
+            <td><input type="number" class="qty-input" value="${qty}" step="0.01" oninput="calculate()"></td>
+            <td><button class="lock-btn ${type==='benefit'?'active':''}" onclick="this.classList.toggle('active')">${type==='benefit'?'🔒':'🔓'}</button></td>
+            <td><button onclick="this.closest('tr').remove();calculate();" style="color:red; border:none; background:none; cursor:pointer;">×</button></td>
+        `;
+        list.appendChild(tr);
+        return tr;
+    }
+
+    function lookup(el) {
+        const code = el.value.trim().toUpperCase();
+        if(masterDB[code]) {
+            const row = el.closest('tr');
+            row.querySelector('.name-input').value = masterDB[code].name;
+            row.querySelector('.price-input').value = masterDB[code].price;
+            calculate();
+        }
+    }
+
+    function loadBundle() {
+        const bCode = document.getElementById('bundleSelect').value;
+        if(!bCode) return;
+        document.getElementById('itemList').innerHTML = "";
+        
+        bundles[bCode].items.forEach(item => {
+            const info = masterDB[item.code] || { price: 0 };
+            addRow(item.type, item.code, item.name || info.name, info.price, item.qty);
+        });
+        calculate();
+    }
+
+    function calculate() {
+        let bSum = 0; // 급여 총점(가)
+        let nbSum = 0; // 비급여 합계
+        const isSenior = document.getElementById('seniorMode').value === 'senior';
+
+        document.querySelectorAll('.item-row').forEach(row => {
+            const p = parseFloat(row.querySelector('.price-input').value) || 0;
+            const q = parseFloat(row.querySelector('.qty-input').value) || 0;
+            if(row.dataset.type === 'benefit') bSum += p * q;
+            else nbSum += p * q;
+        });
+
+        // 본인부담금 계산 (30% 기준)
+        let bPay = bSum * 0.3;
+        if(isSenior) {
+            if(bSum <= 15000) bPay = 1500;
+            else if(bSum <= 20000) bPay = bSum * 0.1;
+            else if(bSum <= 25000) bPay = bSum * 0.2;
+            else bPay = bSum * 0.3;
+        }
+        
+        const finalBPay = Math.floor(bPay / 10) * 10; // 10원 절사
+        const total = finalBPay + nbSum;
+        const finalTotal = Math.floor(total / 100) * 100; // 100원 절사
+
+        document.getElementById('benefitPay').innerText = finalBPay.toLocaleString();
+        document.getElementById('nonBenefitPay').innerText = Math.round(nbSum).toLocaleString();
+        document.getElementById('finalPayment').innerText = finalTotal.toLocaleString();
+    }
+
+    function autoBalance() {
+        const target = parseInt(document.getElementById('targetPrice').value);
+        if(!target) return;
+
+        // 1. 현재 급여 본인부담금 계산
+        calculate();
+        const currentBPay = parseInt(document.getElementById('benefitPay').innerText.replace(/,/g, ''));
+        const neededNB = target - currentBPay;
+
+        // 2. 조정 가능한 비급여 항목 찾기 (잠금 해제된 것)
+        const rows = Array.from(document.querySelectorAll('.item-row[data-type="nonbenefit"]'));
+        const adjustable = rows.filter(r => !r.querySelector('.lock-btn').classList.contains('active'));
+
+        if(adjustable.length === 0) {
+            alert("가격을 조정할 비급여 항목의 잠금(🔓)을 풀어주세요!");
+            return;
+        }
+
+        // 3. 첫 번째 비급여 항목으로 금액 몰아주기
+        const targetRow = adjustable[0];
+        const qty = parseFloat(targetRow.querySelector('.qty-input').value) || 1;
+        
+        // 다른 고정된 비급여액 빼기
+        let fixedNB = 0;
+        rows.filter(r => r.querySelector('.lock-btn').classList.contains('active')).forEach(r => {
+            fixedNB += (parseFloat(r.querySelector('.price-input').value) || 0) * (parseFloat(r.querySelector('.qty-input').value) || 0);
+        });
+
+        targetRow.querySelector('.price-input').value = Math.round((neededNB - fixedNB) / qty);
+        calculate();
+    }
+
+    window.onload = init;
 </script>
+
 </body>
 </html>
