@@ -3,15 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JINSUL - Optimized 2026 Verification</title>
+    <title>JINSUL - High Performance Verification</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         :root { --primary-grey: #333; --accent-red: #d73a49; --border: rgba(0, 0, 0, 0.1); }
-        body { margin: 0; background-color: #f6f6f7; color: #333; font-family: 'Pretendard', sans-serif; min-height: 100vh; display: flex; flex-direction: column; align-items: center; }
+        body { margin: 0; background-color: #f6f6f7; color: #333; font-family: 'Pretendard', sans-serif; min-height: 100vh; display: flex; flex-direction: column; align-items: center; overflow-x: hidden; }
         
         /* [UI] 통합 싱크 보드 */
         #syncBoard { position: fixed; top: 10px; right: 20px; background: #fff; border: 1px solid #222; border-radius: 10px; padding: 12px 18px; font-size: 11px; z-index: 1000; box-shadow: 0 6px 20px rgba(0,0,0,0.1); width: 420px; }
-        .sync-list { display: flex; flex-wrap: gap: 12px; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid #eee; display: flex; }
+        .sync-list { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid #eee; }
         .sync-item { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 80px; }
         .tag-name { font-weight: 800; color: #666; font-size: 10px; }
         .st-box { display: flex; gap: 4px; }
@@ -20,26 +20,27 @@
         .active-loc { color: #28a745 !important; background: #effff3 !important; }
         .fail-val { color: #dc3545 !important; background: #fff0f1 !important; }
 
-        /* [디자인] JINSUL 워터마크 */
+        /* [디자인] JINSUL 고유 스타일 */
         .wm { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; z-index: 0; }
         .wm img { width: min(760px, 78vw); opacity: .10; user-select: none; filter: grayscale(1) saturate(0) brightness(.65) contrast(1.05); }
-        
         header { width: 100%; padding: 30px 0; text-align: center; position: relative; z-index: 1; }
         .top-logo { width: 170px; height: auto; display: block; margin: 0 auto 10px; filter: grayscale(1) saturate(0) brightness(.45) contrast(1.15); opacity: 0.8; }
         
         .container { width: 1550px; max-width: 98%; margin: 0 auto; display: grid; grid-template-columns: 1.8fr 1.2fr; gap: 40px; padding-bottom: 100px; position: relative; z-index: 1; }
         .card { background: rgba(255, 255, 255, 0.10); border: 1px solid var(--border); border-radius: 12px; padding: 35px; backdrop-filter: blur(1px); -webkit-backdrop-filter: blur(1px); margin-bottom: 30px; }
         
+        /* [UI] 멈춤 없는 로더 */
+        #loader { position: fixed; inset: 0; background: white; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 10000; transition: 0.5s; font-weight: 900; }
+        #progress-container { width: 300px; height: 4px; background: #eee; border-radius: 10px; margin-top: 15px; overflow: hidden; }
+        #progress-bar { width: 0%; height: 100%; background: #333; transition: width 0.3s; }
+
         .section-title { font-size: 0.85em; font-weight: 800; color: #999; margin: 30px 0 15px 0; border-left: 3px solid #333; padding-left: 12px; text-transform: uppercase; }
         table { width: 100%; border-collapse: collapse; background: transparent; }
         th { border-bottom: 2px solid #eee; padding: 12px 10px; text-align: left; font-size: 0.8em; color: #aaa; background: rgba(243, 244, 246, 0.5); }
         td { padding: 12px 10px; border-bottom: 1px solid #eee; font-size: 0.95em; }
-        
         .target-input { font-size: 3.5em; width: 240px; background: none; border: none; border-bottom: 4px solid #333; color: #333; text-align: right; font-weight: 900; outline: none; }
         .lock-btn { background: none; border: none; font-size: 1.3em; cursor: pointer; opacity: 0.2; }
         .lock-btn.active { opacity: 1; color: var(--accent-red); }
-        
-        #loader { position: fixed; inset: 0; background: white; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 10000; transition: 0.5s; font-weight: 900; font-size: 1.2em; text-align: center; }
         footer { width: 100%; text-align: center; padding: 60px 0; font-size: 12px; color: #aaa; position: relative; z-index: 1; }
     </style>
 </head>
@@ -50,7 +51,7 @@
 <div id="syncBoard">
     <div class="sync-list" id="syncStatusList"></div>
     <div class="upload-btn-area" style="margin-top:5px;">
-        <button onclick="document.getElementById('manualUpload').click()" style="width:100%; padding:7px; background:#333; color:#fff; border:none; border-radius:6px; cursor:pointer; font-size:10px; font-weight:bold;">📂 수가 파일 수동 업로드</button>
+        <button onclick="document.getElementById('manualUpload').click()" style="width:100%; padding:7px; background:#333; color:#fff; border:none; border-radius:6px; cursor:pointer; font-size:10px; font-weight:bold;">📂 2026 수가 파일 수동 업로드</button>
         <input type="file" id="manualUpload" accept=".csv, .xlsb, .xlsx" multiple style="display:none;" onchange="handleManualUpload(this)">
     </div>
     <div style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 9px; font-weight: 700; color: #aaa;">
@@ -60,8 +61,9 @@
 </div>
 
 <div id="loader">
-    <div>JINSUL MEGA ENGINE</div>
-    <div id="loaderStatus" style="font-size:0.8em; color:#888; margin-top:10px; font-weight:400;">데이터를 서버에서 내려받는 중...</div>
+    <div style="letter-spacing:5px;">JINSUL MEGA ENGINE</div>
+    <div id="loaderStatus" style="font-size:0.8em; color:#888; margin-top:10px; font-weight:400;">백그라운드 엔진 가동 중...</div>
+    <div id="progress-container"><div id="progress-bar"></div></div>
 </div>
 
 <header><img src="https://raw.githubusercontent.com/jinsul-lab/openteam/main/jinsul-logo.png" class="top-logo"></header>
@@ -96,9 +98,9 @@
                 <select id="insuType" onchange="calculate()" style="padding:12px; border-radius:8px; width:100%; border:1px solid #ddd; background: #fff;">
                     <option value="normal">일반 건강보험 (30%)</option>
                     <option value="senior">노인 (65세 이상)</option>
-                    <option value="aid_zero">의료급여 (생활유지비 - 0원)</option>
-                    <option value="aid_rx">의료급여 (처방 - 1,000원)</option>
-                    <option value="aid_no_rx">의료급여 (미처방 - 1,500원)</option>
+                    <option value="aid_zero">의료급여 (0원)</option>
+                    <option value="aid_rx">의료급여 (1,000원)</option>
+                    <option value="aid_no_rx">의료급여 (1,500원)</option>
                 </select>
             </div>
         </div>
@@ -111,107 +113,94 @@
 
 <footer>© JINSUL · 경험과 가치를 현실화하는 컨설팅</footer>
 
+<script id="worker-script" type="text/javascript">
+    // [핵심] 백그라운드 처리를 위한 웹 워커 스크립트
+    self.onmessage = async function(e) {
+        const { buffer, type } = e.data;
+        try {
+            importScripts('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');
+            const workbook = XLSX.read(new Uint8Array(buffer), { type: 'array' });
+            const sheet = workbook.Sheets[workbook.SheetNames[0]];
+            const data = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+            
+            let master = [];
+            for (let i = 0; i < data.length; i++) {
+                const row = data[i];
+                const code = String(row[2] || '').trim().toUpperCase();
+                if (code && code.length >= 5) {
+                    const price = parseInt(String(row[5] || '0').replace(/[^0-9]/g, '')) || 0;
+                    master.push([code, String(row[3] || '명칭없음').trim(), price]);
+                }
+                if (i % 10000 === 0) self.postMessage({ type: 'progress', pct: Math.floor((i/data.length)*100), count: i });
+            }
+            self.postMessage({ type: 'done', data: master });
+        } catch (err) { self.postMessage({ type: 'error' }); }
+    };
+</script>
+
 <script>
     const REPO = "https://raw.githubusercontent.com/jinsul-lab/openteam/main/";
-    const MASTER_FILE = "suga_260101.xlsb"; // 2026 최신 바이너리
+    const MASTER_FILE = "suga_260101.xlsb";
     let masterDB = new Map(), bundles = {}, loadedCount = 0;
-
     const fmt = (v) => Number(v || 0).toLocaleString();
     const clean = (v) => parseFloat(String(v).replace(/,/g, '')) || 0;
 
+    // 워커 생성
+    const blob = new Blob([document.getElementById('worker-script').textContent], { type: 'text/javascript' });
+    const worker = new Worker(URL.createObjectURL(blob));
+
+    worker.onmessage = function(e) {
+        if (e.data.type === 'progress') {
+            updateLoader(`데이터 분석 중... (${e.data.count.toLocaleString()}건)`, e.data.pct);
+        } else if (e.data.type === 'done') {
+            e.data.data.forEach(item => masterDB.set(item[0], { name: item[1], price: item[2] }));
+            updateStatus('fee', "Server");
+        } else if (e.data.type === 'error') {
+            updateStatus('fee', "서버❌");
+        }
+    };
+
     async function init() {
-        // 싱크 보드 초기화
-        const board = document.getElementById('syncStatusList');
         ['fee','drug','mat','bundle'].forEach(id => {
             const n = {fee:'의치과수가',drug:'약가',mat:'치료재료대',bundle:'처방세트'}[id];
             const div = document.createElement('div'); div.className = 'sync-item';
-            div.innerHTML = `<span class="tag-name">${n}</span><div class="st-box"><span id="srv-${id}" class="st-val">연결..</span><span id="loc-${id}" class="st-val fail-val">로컬❌</span></div>`;
-            board.appendChild(div);
+            div.innerHTML = `<span class="tag-name">${n}</span><div class="st-box"><span id="srv-${id}" class="st-val">대기..</span><span id="loc-${id}" class="st-val fail-val">로컬❌</span></div>`;
+            document.getElementById('syncStatusList').appendChild(div);
         });
 
-        // 2026 최신 수가 로드
-        updateLoader("의치과수가 파일을 다운로드 중...");
-        fetchBinarySource(REPO + MASTER_FILE, 'fee');
+        // 2026 수가 연동 시작
+        updateLoader("수가 마스터 다운로드 중...", 10);
+        fetch(REPO + MASTER_FILE).then(r => r.arrayBuffer()).then(buf => worker.postMessage({ buffer: buf }));
 
-        // 약가/재료대/처방세트 (CSV)
+        // 기타 데이터 연동
         fetchSource(REPO + "약가.csv", { code: 0, name: 6, price: 3 }, 'drug');
         fetchSource(REPO + "치료재료대.csv", { code: 0, name: 2, price: 5 }, 'mat');
-        
         fetch(REPO + "처방세트.xls").then(r => r.arrayBuffer()).then(b => {
-            const workbook = XLSX.read(new Uint8Array(b), { type: 'array' });
-            const count = parseBundle(XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { header: 1 }));
+            const count = parseBundle(XLSX.utils.sheet_to_json(XLSX.read(new Uint8Array(b), {type:'array'}).Sheets[XLSX.read(new Uint8Array(b), {type:'array'}).SheetNames[0]], {header:1}));
             updateStatus('bundle', count > 0 ? "Server" : "서버❌");
-        }).catch(() => updateStatus('bundle', "서버❌"));
-    }
-
-    async function fetchBinarySource(url, key) {
-        try {
-            const res = await fetch(url + "?t=" + Date.now());
-            if (!res.ok) throw new Error();
-            updateLoader("수가 데이터를 분석 중... (약 1~2초 소요)");
-            
-            // Web Worker가 없는 환경을 위해 비동기 지연 처리 (화면 멈춤 방지)
-            setTimeout(async () => {
-                const workbook = XLSX.read(new Uint8Array(await res.arrayBuffer()), { type: 'array' });
-                const data = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { header: 1 });
-                const count = processHiraExcel(data);
-                updateStatus(key, count > 0 ? "Server" : "서버❌");
-            }, 100);
-        } catch { updateStatus(key, "서버❌"); }
+        });
     }
 
     async function fetchSource(url, cfg, key) {
         try {
             const res = await fetch(url + "?t=" + Date.now());
-            if (!res.ok) throw new Error();
-            const eucKr = new TextDecoder('euc-kr').decode(await res.arrayBuffer());
-            const text = (eucKr.includes('코드') || eucKr.includes('수가')) ? eucKr : new TextDecoder('utf-8').decode(await res.arrayBuffer());
-            parseCSV(text, cfg);
+            const text = new TextDecoder('euc-kr').decode(await res.arrayBuffer());
+            const rows = text.split('\n');
+            rows.forEach(line => {
+                const cols = line.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || [];
+                const code = cols[cfg.code]?.replace(/"/g, '').trim().toUpperCase();
+                if (code && code.length > 3) masterDB.set(code, { name: cols[cfg.name]?.replace(/"/g, '').trim() || "명칭없음", price: parseInt(cols[cfg.price]?.replace(/[^0-9]/g, '')) || 0 });
+            });
             updateStatus(key, "Server");
         } catch { updateStatus(key, "서버❌"); }
     }
 
-    function processHiraExcel(rows) {
-        let count = 0;
-        rows.forEach((row, i) => {
-            if(i % 1000 === 0) updateLoader(`데이터 인덱싱 중... (${i.toLocaleString()}건)`);
-            const code = String(row[2] || '').trim().toUpperCase(); // C열
-            if (code && code.length >= 5) {
-                const price = parseInt(String(row[5] || '0').replace(/[^0-9]/g, '')) || 0; // F열
-                masterDB.set(code, { name: String(row[3] || '명칭없음').trim(), price: price });
-                count++;
-            }
-        });
-        return count;
-    }
-
-    function parseCSV(text, cfg) {
-        const rows = text.split('\n');
-        rows.forEach(line => {
-            const cols = line.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || [];
-            const code = cols[cfg.code]?.replace(/"/g, '').trim().toUpperCase();
-            if (code && code.length > 3) {
-                const price = parseInt(cols[cfg.price]?.replace(/"/g, '').replace(/[^0-9]/g, '')) || 0;
-                masterDB.set(code, { name: cols[cfg.name]?.replace(/"/g, '').trim() || "명칭없음", price: price });
-            }
-        });
-    }
-
-    async function handleManualUpload(input) {
-        const files = Array.from(input.files);
-        for (const file of files) {
-            const buffer = await file.arrayBuffer();
-            const name = file.name.toLowerCase();
-            if (name.endsWith('.xlsb') || name.endsWith('.xlsx')) {
-                const wb = XLSX.read(new Uint8Array(buffer), { type: 'array' });
-                processHiraExcel(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1 }));
-                updateStatus('fee', "Local");
-            } else {
-                const key = name.includes('약가') ? 'drug' : (name.includes('재료') ? 'mat' : 'fee');
-                parseCSV(new TextDecoder('euc-kr').decode(buffer), { code: 0, name: 3, price: 7 });
-                updateStatus(key, "Local");
-            }
-        }
+    function handleManualUpload(input) {
+        const file = input.files[0]; if(!file) return;
+        updateLoader(`${file.name} 분석 중...`, 0);
+        document.getElementById('loader').style.display = 'flex';
+        document.getElementById('loader').style.opacity = '1';
+        file.arrayBuffer().then(buf => worker.postMessage({ buffer: buf }));
     }
 
     function updateStatus(key, status) {
@@ -220,16 +209,18 @@
         if (status === "Server") { srv.innerHTML = `서버✔`; srv.className = "st-val active-svr"; }
         else if (status === "Local") { loc.innerHTML = `로컬✔`; loc.className = "st-val active-loc"; }
         else { srv.innerHTML = `서버❌`; srv.className = "st-val fail-val"; }
-        
         document.getElementById('totalItems').innerText = masterDB.size.toLocaleString();
         loadedCount++;
-        if (loadedCount >= 4 || masterDB.size > 200000) {
+        if (loadedCount >= 4 || masterDB.size > 270000) {
             document.getElementById('loader').style.opacity = '0';
             setTimeout(() => { document.getElementById('loader').style.display = 'none'; renderOptions(); }, 500);
         }
     }
 
-    function updateLoader(msg) { document.getElementById('loaderStatus').innerText = msg; }
+    function updateLoader(msg, pct) { 
+        document.getElementById('loaderStatus').innerText = msg;
+        document.getElementById('progress-bar').style.width = pct + "%";
+    }
 
     function parseBundle(data) {
         let cur = null, sec = "";
