@@ -2,128 +2,77 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JINSUL - Integrated Consulting System</title>
+    <title>JINSUL - Professional Consulting System</title>
     <style>
-        :root { 
-            --primary: #0052cc; 
-            --accent: #d73a49;
-            --text: #172b4d;
-        }
+        :root { --primary: #0052cc; --accent: #d73a49; }
         
-        /* 1. Glassmorphism & Watermark 스타일 */
+        /* 1. 디자인 레이아웃 및 워터마크 */
         body { 
-            margin: 0; 
-            background-color: #f0f2f5;
-            color: var(--text); 
-            font-family: 'Pretendard', -apple-system, sans-serif;
-            min-height: 100vh;
-            position: relative;
+            margin: 0; background-color: #f8f9fa; color: #172b4d; 
+            font-family: 'Pretendard', sans-serif; position: relative; min-height: 100vh;
         }
-
-        /* 중앙 워터마크 */
-        .watermark {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 70%;
-            opacity: 0.08; /* 워터마크 투명도 */
-            z-index: -1;
-            pointer-events: none;
-            filter: grayscale(1);
-        }
-
-        header { 
-            padding: 30px; 
-            text-align: center; 
-            background: rgba(255, 255, 255, 0.5);
-            backdrop-filter: blur(10px);
-        }
-
-        /* 상단 로고 크기 조정 */
-        .top-logo { width: 220px; filter: grayscale(1); margin-bottom: 10px; }
-
-        .container { max-width: 1200px; margin: 30px auto; padding: 0 20px; display: grid; grid-template-columns: 2fr 1fr; gap: 25px; }
         
-        /* 2. 표 및 카드 투명도 100% 설정 */
+        .watermark {
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 60%; opacity: 0.08; z-index: -1; pointer-events: none; filter: grayscale(1);
+        }
+
+        header { padding: 30px; text-align: center; border-bottom: 1px solid rgba(0,0,0,0.05); }
+        .top-logo { width: 200px; filter: grayscale(1); margin-bottom: 10px; }
+
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
+
+        /* 2. 표 및 카드 100% 투명 설정 */
         .card { 
-            background: rgba(255, 255, 255, 0.0); /* 100% 투명 */
-            border-radius: 20px; 
-            padding: 25px; 
-            border: 1px solid rgba(0, 0, 0, 0.1);
-            backdrop-filter: blur(2px); /* 배경 워터마크가 비치되 글자는 보이게 함 */
-            margin-bottom: 25px;
+            background: rgba(255, 255, 255, 0); /* 완전 투명 */
+            border: 1px solid rgba(0,0,0,0.1); border-radius: 15px; padding: 20px; 
+            backdrop-filter: blur(2px); margin-bottom: 20px;
         }
 
-        table { width: 100%; border-collapse: collapse; background: transparent; }
-        th { background: rgba(0, 0, 0, 0.05); padding: 12px; text-align: left; font-size: 0.85em; }
-        td { padding: 12px; border-bottom: 1px solid rgba(0, 0, 0, 0.05); }
-
-        input { 
-            background: rgba(255, 255, 255, 0.4); 
-            border: 1px solid rgba(0, 0, 0, 0.1); 
-            padding: 8px; 
-            border-radius: 6px; 
-            width: 100%;
-        }
+        table { width: 100%; border-collapse: collapse; background: transparent !important; }
+        th { background: rgba(0,0,0,0.05); padding: 12px; text-align: left; font-size: 0.8em; }
+        td { padding: 10px; border-bottom: 1px solid rgba(0,0,0,0.05); background: transparent !important; }
 
         /* 목표가 박스 */
-        .target-box { 
-            background: rgba(0, 82, 204, 0.8); 
-            color: white; 
-            padding: 30px; 
-            border-radius: 20px; 
-            text-align: center;
-            backdrop-filter: blur(5px);
-        }
-        .target-input { 
-            font-size: 2.5em; width: 180px; background: none; border: none; 
-            border-bottom: 3px solid white; color: white; text-align: right; font-weight: 800; 
-        }
+        .target-box { background: var(--primary); color: white; padding: 30px; border-radius: 20px; text-align: center; }
+        .target-input { font-size: 2.5em; width: 180px; background: none; border: none; border-bottom: 3px solid white; color: white; text-align: right; font-weight: 800; outline: none; }
 
-        /* 하단 카피라이트 */
-        footer { 
-            text-align: center; 
-            padding: 50px 0; 
-            color: #888; 
-            font-size: 0.9em; 
-            font-weight: 600;
-        }
+        /* 3. 하단 카피라이트 */
+        footer { text-align: center; padding: 60px 0; color: #888; font-size: 0.9em; font-weight: 600; }
 
-        .btn { padding: 12px 20px; border-radius: 10px; border: none; font-weight: 700; cursor: pointer; }
+        /* 로딩 창 */
+        #loader { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 10000; }
+        .error-log { color: red; font-size: 0.8em; margin-top: 10px; max-width: 80%; text-align: center; }
+        
+        .btn { padding: 12px 20px; border-radius: 8px; border: none; font-weight: 700; cursor: pointer; }
         .btn-main { background: var(--primary); color: white; width: 100%; margin-top: 15px; }
         .lock-btn { background: none; border: none; font-size: 1.2em; cursor: pointer; opacity: 0.3; }
         .lock-btn.active { opacity: 1; color: var(--accent); }
-
-        #loadingOverlay { 
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-            background: white; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; 
-        }
     </style>
 </head>
 <body>
 
 <img src="https://raw.githubusercontent.com/jinsul-lab/openteam/main/jinsul-logo.png" class="watermark" onerror="this.style.display='none'">
 
-<div id="loadingOverlay">
-    <p id="loadText" style="font-weight:700;">JINSUL 데이터 엔진 가동 중...</p>
-    <div style="font-size: 0.8em; color: #888;" id="detailStatus">GitHub 연결 확인 중...</div>
+<div id="loader">
+    <div style="font-weight: 900; font-size: 1.5em; color: var(--primary); margin-bottom: 10px;">JINSUL ENGINE STARTING...</div>
+    <div id="statusText">GitHub 저장소에서 데이터를 불러오고 있습니다.</div>
+    <div id="errorLog" class="error-log"></div>
 </div>
 
 <header>
-    <img src="https://raw.githubusercontent.com/jinsul-lab/openteam/main/jinsul-logo.png" class="top-logo" alt="JINSUL LOGO">
-    <div style="font-weight: 800; letter-spacing: -1px;">통합 수가 컨설팅 시스템</div>
+    <img src="https://raw.githubusercontent.com/jinsul-lab/openteam/main/jinsul-logo.png" class="top-logo" alt="JINSUL">
+    <div style="font-weight: 700;">통합 수가 컨설팅 시스템</div>
 </header>
 
 <div class="container">
-    <div class="work-area">
+    <div class="main-content">
         <div class="card">
             <div style="display: flex; gap: 10px; margin-bottom: 20px;">
-                <select id="bundleSelect" style="flex: 1; padding: 12px; border-radius: 10px; border: 1px solid #ddd; font-weight: 700;">
-                    <option value="">-- 세트 처방 로드 (code.xls) --</option>
+                <select id="bundleSelect" style="flex: 1; padding: 12px; border-radius: 8px; border: 1px solid #ddd; font-weight: 700;">
+                    <option value="">-- 불러올 묶음코드를 선택하세요 --</option>
                 </select>
-                <button class="btn" onclick="loadBundle()" style="background: #ddd;">로드</button>
+                <button class="btn" onclick="loadBundle()" style="background: #eee;">로드</button>
             </div>
 
             <table>
@@ -142,11 +91,11 @@
         </div>
     </div>
 
-    <div class="side-area">
+    <div class="sidebar">
         <div class="target-box">
-            <div style="font-size: 0.9em; margin-bottom: 10px;">🎯 목표 수납액</div>
+            <div style="font-size: 0.9em; opacity: 0.8; margin-bottom: 5px;">🎯 목표 수납액</div>
             <input type="number" id="targetPrice" class="target-input" value="89000"> 원
-            <div style="margin-top: 20px;">
+            <div style="margin-top: 15px;">
                 <select id="seniorMode" onchange="calculate()" style="width: 100%; padding: 8px; border: none; border-radius: 8px; font-weight: 700;">
                     <option value="normal">일반 외래 (30%)</option>
                     <option value="senior">노인 (65세 이상)</option>
@@ -154,56 +103,64 @@
             </div>
         </div>
 
-        <div class="card" style="text-align: center; margin-top: 20px; border: 1px solid var(--primary);">
-            <div style="color: #666; font-size: 0.9em;">현재 환자 수납액</div>
+        <div class="card" style="text-align: center; margin-top: 20px; border: 2px solid var(--primary);">
+            <div style="font-size: 0.9em; color: #666;">현재 수납 예상액</div>
             <div id="finalPayment" style="font-size: 3em; font-weight: 900; color: var(--accent);">0</div>
-            <div style="font-weight: 700; color: #666;">본인부담금: <span id="benefitPay">0</span>원</div>
+            <div style="font-size: 0.8em; color: #888;">본인부담금: <span id="benefitPay">0</span>원</div>
         </div>
     </div>
 </div>
 
 <footer>
     © JINSUL. All Rights Reserved. <br>
-    <span style="font-weight: 400; font-size: 0.8em; opacity: 0.6;">EXPERIENCE & VALUE REALIZATION</span>
+    <span style="opacity: 0.6; font-size: 0.8em;">EXPERIENCE & VALUE REALIZATION</span>
 </footer>
 
 <script>
-    // 저장소 경로 및 파일명 (사용자님 GitHub 정보 반영)
-    const BASE_URL = "https://raw.githubusercontent.com/jinsul-lab/openteam/main/";
-    const MASTER_FILES = [
+    // 깃허브 저장소 정보 (오타 및 경로 최종 확인)
+    const REPO_URL = "https://raw.githubusercontent.com/jinsul-lab/openteam/main/";
+    const FILES = [
         "의치과수가(20260103).csv",
         "약가(20260101).csv",
-        "치료재료대(20251201).csv"
+        "치료재료대(20251201).csv",
+        "code.xls - sheet.csv"
     ];
-    const BUNDLE_FILE = "code.xls - sheet.csv";
 
     let masterDB = {};
     let bundles = {};
 
     async function init() {
-        const detail = document.getElementById('detailStatus');
+        const status = document.getElementById('statusText');
+        const errorLog = document.getElementById('errorLog');
+        
         try {
-            for (const file of MASTER_FILES) {
-                detail.innerText = `${file} 데이터 동기화 중...`;
-                await loadCSV(file);
+            for (const file of FILES) {
+                status.innerText = `${file} 읽는 중...`;
+                const res = await fetch(REPO_URL + encodeURIComponent(file));
+                
+                if (!res.ok) {
+                    throw new Error(`[404] 파일을 찾을 수 없음: ${file}\n(브랜치가 main이 맞는지, 파일명에 오타가 없는지 확인하세요)`);
+                }
+
+                const arrayBuffer = await res.arrayBuffer();
+                const text = new TextDecoder('euc-kr').decode(arrayBuffer);
+                
+                if (file.includes('code.xls')) {
+                    parseBundle(text);
+                } else {
+                    parseMaster(text);
+                }
             }
-            detail.innerText = `세트 처방(Bundle) 구성 중...`;
-            await loadBundleCSV(BUNDLE_FILE);
-            
-            document.getElementById('loadingOverlay').style.display = 'none';
-            renderBundleOptions();
+            document.getElementById('loader').style.display = 'none';
+            renderOptions();
         } catch (e) {
-            detail.innerHTML = "<span style='color:red'>데이터 로딩 중 에러가 발생했습니다. 파일명을 확인해주세요.</span>";
+            status.innerText = "❌ 데이터 로딩 중 에러 발생";
+            errorLog.innerText = e.message;
             console.error(e);
         }
     }
 
-    async function loadCSV(file) {
-        const res = await fetch(BASE_URL + encodeURIComponent(file));
-        if (!res.ok) throw new Error(file + " 로드 실패");
-        const arrayBuffer = await res.arrayBuffer();
-        const decoder = new TextDecoder('euc-kr');
-        const text = decoder.decode(arrayBuffer);
+    function parseMaster(text) {
         const rows = text.split('\n').slice(1);
         rows.forEach(row => {
             const cols = row.split(',');
@@ -217,11 +174,7 @@
         });
     }
 
-    async function loadBundleCSV(file) {
-        const res = await fetch(BASE_URL + encodeURIComponent(file));
-        const arrayBuffer = await res.arrayBuffer();
-        const decoder = new TextDecoder('euc-kr');
-        const text = decoder.decode(arrayBuffer);
+    function parseBundle(text) {
         const rows = text.split('\n').slice(1);
         rows.forEach(row => {
             const cols = row.split(',');
@@ -241,12 +194,12 @@
         });
     }
 
-    function renderBundleOptions() {
+    function renderOptions() {
         const select = document.getElementById('bundleSelect');
         for (let code in bundles) {
             const opt = document.createElement('option');
             opt.value = code;
-            opt.innerText = `[${code}] ${bundles[code].name}`;
+            opt.innerText = `[세트] ${bundles[code].name}`;
             select.appendChild(opt);
         }
     }
@@ -262,9 +215,9 @@
             tr.dataset.type = item.type;
             tr.innerHTML = `
                 <td style="font-weight:700;">${item.code}</td>
-                <td><input type="text" value="${item.name || info.name}"></td>
-                <td><input type="number" class="price" value="${info.price}" oninput="calculate()"></td>
-                <td><input type="number" class="qty" value="${item.qty}" step="0.1" oninput="calculate()"></td>
+                <td><input type="text" value="${item.name || info.name}" style="background:transparent; border:none;"></td>
+                <td><input type="number" class="price" value="${info.price}" oninput="calculate()" style="background:rgba(255,255,255,0.5);"></td>
+                <td><input type="number" class="qty" value="${item.qty}" step="0.1" oninput="calculate()" style="background:rgba(255,255,255,0.5);"></td>
                 <td><button class="lock-btn ${item.type==='benefit'?'active':''}" onclick="this.classList.toggle('active')">${item.type==='benefit'?'🔒':'🔓'}</button></td>
             `;
             list.appendChild(tr);
@@ -292,7 +245,7 @@
         const total = Math.floor((finalB + nbSum) / 100) * 100;
 
         document.getElementById('benefitPay').innerText = finalB.toLocaleString();
-        document.getElementById('finalPayment').innerText = total.toLocaleString();
+        document.getElementById('finalPayment').innerText = total.toLocaleString() + " 원";
     }
 
     function autoBalance() {
@@ -304,7 +257,7 @@
         const nbRows = Array.from(document.querySelectorAll('tr[data-type="nonbenefit"]'));
         const adjustable = nbRows.filter(r => !r.querySelector('.lock-btn').classList.contains('active'));
 
-        if (adjustable.length === 0) return alert("단가를 조정할 비급여 항목의 잠금(🔓)을 풀어주세요.");
+        if (adjustable.length === 0) return alert("가격을 조정할 비급여 항목의 잠금(🔓)을 풀어주세요.");
 
         const targetRow = adjustable[0];
         const qty = parseFloat(targetRow.querySelector('.qty').value) || 1;
