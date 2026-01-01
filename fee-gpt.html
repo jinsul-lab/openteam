@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JINSUL - Case Verification System</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        :root { --primary-grey: #333; --accent-red: #d73a49; --border: rgba(0, 0, 0, 0.1); }
+        body { margin: 0; background-color: #f6f6f7; color: #333; font-family: 'Pretendard', sans-serif; min-height: 100vh; display: flex; flex-direction: column; align-items: center; overflow-x: hidden; }
+        
+        /* [UI] 싱크 보드 - 상자 형태 UI 완벽 고정 */
+        #syncBoard { position: fixed; top: 10px; right: 20px; background: #fff; border: 1px solid #222; border-radius: 10px; padding: 12px 18px; font-size: 11px; z-index: 1000; box-shadow: 0 6px 20px rgba(0,0,0,0.1); width: 420px; }
+        .sync-list { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid #eee; }
+        .sync-item { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 80px; }
+        .tag-name { font-weight: 800; color: #666; font-size: 10px; }
+        .st-box { display: flex; gap: 4px; }
+        .st-val { font-weight: 700; padding: 2px 4px; border-radius: 3px; font-size: 9px; background: #f5f5f5; color: #bbb; display: flex; align-items: center; gap: 2px; }
+        
+        .active-svr { color: #007bff !important; background: #eef6ff !important; }
+        .active-loc { color: #28a745 !important; background: #effff3 !important; }
+        .fail-val { color: #dc3545 !important; background: #fff0f1 !important; }
+        .loading-val { color: #856404 !important; background: #fff3cd !important; border: 1px solid #ffeeba; }
+
+        /* [디자인] JINSUL 규격 (170px 로고 / 10% 워터마크 / 1px 블러) */
+        .wm { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; z-index: 0; }
+        .wm img { width: min(760px, 78vw); opacity: .10; user-select: none; filter: grayscale(1) saturate(0) brightness(.65) contrast(1.05); }
+        header { width: 100%; padding: 30px 0; text-align: center; }
+        .top-logo { width: 170px; height: auto; display: block; margin: 0 auto 10px; filter: grayscale(1) saturate(0) brightness(.45) contrast(1.15); opacity: 0.8; }
+        
+        .container { width: 1550px; max-width: 98%; margin: 0 auto; display: grid; grid-template-columns: 1.8fr 1.2fr; gap: 40px; padding-bottom: 100px; position: relative; z-index: 1; }
+        .card { background: rgba(255, 255, 255, 0.10); border: 1px solid var(--border); border-radius: 12px; padding: 35px; backdrop-filter: blur(1px); -webkit-backdrop-filter: blur(1px); margin-bottom: 30px; }
+        
+        .section-title { font-size: 0.85em; font-weight: 800; color: #999; margin: 30px 0 15px 0; border-left: 3px solid #333; padding-left: 12px; text-transform: uppercase; }
+        table { width: 100%; border-collapse: collapse; background: transparent; }
+        th { border-bottom: 2px solid #eee; padding: 12px 10px; text-align: left; font-size: 0.8em; color: #aaa; background: rgba(243, 244, 246, 0.5); }
+        td { padding: 12px 10px; border-bottom: 1px solid #eee; font-size: 0.95em; }
+        
+        .target-input { font-size: 3.5em; width: 240px; background: none; border: none; border-bottom: 4px solid #333; color: #333; text-align: right; font-weight: 900; outline: none; }
+        .lock-btn { background: none; border: none; font-size: 1.3em; cursor: pointer; opacity: 0.2; }
+        .lock-btn.active { opacity: 1; color: var(--accent-red); }
+        
+        #loader { position: fixed; inset: 0; background: white; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 10000; transition: 0.5s; font-weight: 900; font-size: 1.5em; }
+        footer { width: 100%; text-align: center; padding: 60px 0; font-size: 12px; color: #aaa; }
+    </style>
+</head>
+<body>
+
+<div class="wm" aria-hidden="true"><img src="https://raw.githubusercontent.com/jinsul-lab/openteam/main/jinsul-logo.png" alt=""></div>
+
+<div id="syncBoard">
+    <div class="sync-list" id="syncStatusList"></div>
+    <div class="upload-btn-area" style="margin-top:5px;">
+        <button onclick="document.getElementById('manualUpload').click()" style="width:100%; padding:7px; background:#333; color:#fff; border:none; border-radius:6px; cursor:pointer; font-size:10px; font-weight:bold;">📂 수가 파일 업로드 (다중 선택)</button>
+        <input type="file" id="manualUpload" accept=".xlsx, .xlsb, .csv" multiple style="display:none;" onchange="handleManualFiles(this)">
+    </div>
+    <div style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 9px; font-weight: 700; color: #aaa;">
+        <span>데이터 로드 완료: <span id="totalItems" style="color:#333;">0</span> 건</span>
+        <span style="cursor:pointer; color:#007bff;" onclick="location.reload()">새로고침 ↻</span>
+    </div>
+</div>
+
+<div id="loader">데이터를 연동 중입니다</div>
+
+<header><img src="https://raw.githubusercontent.com/jinsul-lab/openteam/main/jinsul-logo.png" class="top-logo"></header>
+
+<div class="container">
+    <div class="main-column">
+        <div class="card">
+            <div style="display: flex; gap: 12px; margin-bottom: 35px;">
+                <select id="bundleSelect" style="flex: 1; font-weight: 700; font-size: 1.1em; border: 2px solid #333; border-radius: 8px; padding: 12px; outline:none; background:#fff;"></select>
+                <button onclick="loadBundle()" style="padding:0 40px; border-radius:10px; border:1px solid #ddd; font-weight:700; cursor:pointer; background: #333; color:#fff;">조회하기</button>
+            </div>
+            <div id="resultContent" style="display:none;">
+                <div class="section-title">Chief Complaint</div>
+                <div id="symptomDisplay" style="padding:25px; background:rgba(0,0,0,0.02); border-radius:12px; font-size:1em; line-height:1.8; margin-bottom:30px;"></div>
+                <div class="section-title">Diagnosis</div>
+                <table><tbody id="diagList"></tbody></table>
+                <div class="section-title">Prescription / 수량 역산</div>
+                <table>
+                    <thead><tr><th style="width:18%">코드</th><th>항목명</th><th style="width:22%">단가</th><th style="width:15%">수량</th><th style="width:10%; text-align:center;">잠금</th></tr></thead>
+                    <tbody id="itemList"></tbody>
+                </table>
+                <button style="background:#333; color:white; width:100%; padding:18px; border:none; border-radius:10px; font-weight:700; margin-top:20px; cursor:pointer;" onclick="autoBalance()">강제 역산 실행</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="side-column">
+        <div class="card" style="background: rgba(0,0,0,0.03); text-align: center; padding: 45px;">
+            <div style="font-size: 0.85em; color: #888; margin-bottom: 12px; font-weight: 600;">TARGET AMOUNT</div>
+            <input type="number" id="targetPrice" class="target-input" value="89000" oninput="autoBalance()"> 원
+        </div>
+        <div class="card" style="text-align: center; margin-top: 30px; border-top: 6px solid #333;">
+            <div id="finalPayment" style="font-size: 4em; font-weight: 900; color: #333; letter-spacing: -3px;">0</div>
+            <div style="margin-top:20px; font-size:1.1em; color:#888;">본인부담금: <span id="benefitPay" style="font-weight:800; color:#333;">0</span>원</div>
+        </div>
+    </div>
+</div>
+
+<footer>© JINSUL · 경험과 가치를 현실화하는 컨설팅</footer>
+
+<script id="worker-script" type="text/javascript">
+    importScripts('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');
+    self.onmessage = async function(e) {
+        const { url, buffer, source, config } = e.data;
+        try {
+            let dataBuffer = buffer;
+            if (url) {
+                const response = await fetch(url);
+                const reader = response.body.getReader();
+                const contentLength = +response.headers.get('Content-Length');
+                let receivedLength = 0; let chunks = [];
+                while(true) {
+                    const {done, value} = await reader.read();
+                    if (done) break;
+                    chunks.push(value); receivedLength += value.length;
+                    if (contentLength) self.postMessage({ type: 'progress', pct: Math.floor((receivedLength / contentLength) * 100), source });
+                }
+                dataBuffer = new Uint8Array(receivedLength);
+                let pos = 0; for(let chunk of chunks) { dataBuffer.set(chunk, pos); pos += chunk.length; }
+            }
+            
+            self.postMessage({ type: 'parsing', source });
+            const workbook = XLSX.read(dataBuffer, { type: 'array', cellStyles: false, bookSheets: true });
+            const sheet = workbook.Sheets[workbook.SheetNames[0]];
+            const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: true });
+            
+            const data = [];
+            for(let i = 1; i < rows.length; i++) {
+                const r = rows[i];
+                if(!r || r.length < 3) continue;
+                const code = String(r[config.code] || '').trim().toUpperCase();
+                if(code && code.length >= 4) {
+                    data.push([code, String(r[config.name] || '명칭없음').trim(), parseInt(String(r[config.price] || '0').replace(/[^0-9]/g, '')) || 0]);
+                }
+            }
+            self.postMessage({ type: 'done', data, source });
+        } catch (err) { self.postMessage({ type: 'error', source }); }
+    };
+</script>
+
+<script>
+    const REPO = "https://raw.githubusercontent.com/jinsul-lab/openteam/main/";
+    let masterDB = new Map(), bundles = {};
+    const fmt = (v) => Number(v || 0).toLocaleString();
+    const clean = (v) => parseFloat(String(v).replace(/,/g, '')) || 0;
+
+    const blob = new Blob([document.getElementById('worker-script').textContent], { type: 'text/javascript' });
+    const worker = new Worker(URL.createObjectURL(blob));
+
+    worker.onmessage = function(e) {
+        const srv = document.getElementById('srv-' + e.data.source);
+        const loc = document.getElementById('loc-' + e.data.source);
+        if (e.data.type === 'progress') { srv.innerHTML = `다운 ${e.data.pct}%`; srv.className = "st-val loading-val"; }
+        else if (e.data.type === 'parsing') { srv.innerHTML = "분석 중.."; }
+        else if (e.data.type === 'done') {
+            if (e.data.data && e.data.data.length > 0) {
+                e.data.data.forEach(item => masterDB.set(item[0], { name: item[1], price: item[2] }));
+                updateStatusUI(e.data.source, loc && loc.innerHTML !== "로컬❌" ? "Local" : "Server");
+            } else { updateStatusUI(e.data.source, "서버❌"); }
+        } else if (e.data.type === 'error') { updateStatusUI(e.data.source, "서버❌"); }
+    };
+
+    async function init() {
+        const board = document.getElementById('syncStatusList');
+        const items = [{id:'fee',n:'의치과수가'},{id:'drug',n:'약가'},{id:'mat',n:'치료재료대'},{id:'bundle',n:'처방세트'}];
+        items.forEach(item => {
+            const div = document.createElement('div'); div.className = 'sync-item';
+            div.innerHTML = `<span class="tag-name">${item.n}</span><div class="st-box"><span id="srv-${item.id}" class="st-val">연결..</span><span id="loc-${item.id}" class="st-val fail-val">로컬❌</span></div>`;
+            board.appendChild(div);
+        });
+
+        // 1. 서버 자동 로드 (suga_260101.xlsx)
+        worker.postMessage({ url: REPO + "suga_260101.xlsx", source: 'fee', config: { code: 2, name: 3, price: 5 } });
+
+        // 2. 약가, 재료대 로드
+        fetchCSV(REPO + "약가.csv", 'drug', { code: 0, name: 6, price: 3 });
+        fetchCSV(REPO + "치료재료대.csv", 'mat', { code: 0, name: 2, price: 5 });
+        
+        // 3. 처방세트 로드
+        fetch(REPO + "처방세트.xls").then(r => r.arrayBuffer()).then(b => {
+            const wb = XLSX.read(new Uint8Array(b), { type: 'array' });
+            parseBundle(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1 }));
+            updateStatusUI('bundle', "Server");
+            renderOptions();
+        });
+
+        setTimeout(() => { document.getElementById('loader').style.opacity = '0'; setTimeout(()=>document.getElementById('loader').style.display='none', 500); }, 1000);
+    }
+
+    
+async function fetchCSV(url, key, cfg) {
+    try {
+        const res = await fetch(url + "?t=" + Date.now());
+        const buf = await res.arrayBuffer();
+
+        let text;
+        try {
+            text = new TextDecoder('utf-8').decode(buf);
+            if (text.includes('�')) throw 0;
+        } catch {
+            text = new TextDecoder('cp949').decode(buf);
+        }
+
+        let count = 0;
+        text.split(/
+?
+/).forEach((line, idx) => {
+            if (idx === 0) return; // header skip
+            const cols = line.split(',');
+            const code = cols[0]?.trim().toUpperCase();
+            const name = cols[3]?.trim();
+            const price = parseInt((cols[9] || '').replace(/[^0-9]/g,'')) || 0;
+            if (code && code.length >= 4 && price > 0) {
+                masterDB.set(code, { name: name || '명칭없음', price });
+                count++;
+            }
+        });
+
+        updateStatusUI(key, count > 0 ? "Server" : "서버❌");
+    } catch {
+        updateStatusUI(key, "서버❌");
+    }
+}
+
+
+    // [중요] 다중 업로드 및 "의치과수가.csv" 수동 인식 로직
+    function handleManualFiles(input) {
+        const files = Array.from(input.files);
+        files.forEach(file => {
+            const name = file.name.toLowerCase();
+            // 파일명에 '수가' 또는 'suga'가 들어가면 무조건 'fee'(의치과수가)로 인식
+            const key = (name.includes('수가') || name.includes('suga')) ? 'fee' : (name.includes('약가') ? 'drug' : (name.includes('재료') ? 'mat' : null));
+            if (!key) return;
+
+            const loc = document.getElementById('loc-' + key);
+            loc.innerHTML = "분석중.."; loc.className = "st-val loading-val";
+            
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                if (name.endsWith('.csv')) {
+                    const text = new TextDecoder('euc-kr').decode(e.target.result);
+                    // 의치과수가.csv는 서버 CSV 규격과 동일하게 파싱
+                    const cfg = (key === 'fee') ? { code: 0, name: 3, price: 7 } : (key === 'drug' ? { code: 0, name: 6, price: 3 } : { code: 0, name: 2, price: 5 });
+                    
+                    const rows = text.split('\n');
+                    rows.forEach(line => {
+                        const cols = line.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || [];
+                        const code = cols[cfg.code]?.replace(/"/g, '').trim().toUpperCase();
+                        if (code && code.length >= 4) {
+                            masterDB.set(code, { name: cols[cfg.name]?.replace(/"/g, '').trim() || "명칭없음", price: parseInt(cols[cfg.price]?.replace(/[^0-9]/g, '')) || 0 });
+                        }
+                    });
+                    updateStatusUI(key, "Local");
+                } else {
+                    // 엑셀 파일인 경우 Worker로 전달
+                    worker.postMessage({ buffer: new Uint8Array(e.target.result), source: key, config: { code: 2, name: 3, price: 5 } });
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        });
+    }
+
+    function updateStatusUI(key, status) {
+        const srv = document.getElementById('srv-' + key);
+        const loc = document.getElementById('loc-' + key);
+        if (status === "Server") { srv.innerHTML = `서버✔`; srv.className = "st-val active-svr"; }
+        else if (status === "Local") { loc.innerHTML = `로컬✔`; loc.className = "st-val active-loc"; }
+        else if (status === "서버❌") { srv.innerHTML = `서버❌`; srv.className = "st-val fail-val"; }
+        document.getElementById('totalItems').innerText = masterDB.size.toLocaleString();
+    }
+
+    function parseBundle(data) {
+        let cur = null, sec = "";
+        data.forEach(r => {
+            const a = String(r[0]||"").trim(), c = String(r[2]||"").trim();
+            if (a.startsWith('+') || a.startsWith('Z')) {
+                cur = a; bundles[cur] = { name: String(r[1]||a).trim(), symptoms: [], diags: [], items: [] };
+                sec = ""; return;
+            }
+            if (!cur) return;
+            if (c === "증상") sec = "CC"; else if (c === "상병") sec = "DIAG"; else if (c === "처방" || c === "ITEM") sec = "ITEM";
+            if (sec === "CC" && r[4] && !String(r[4]).includes('PLAN')) bundles[cur].symptoms.push(r[4]);
+            else if (sec === "DIAG" && r[3]) bundles[cur].diags.push({ code: r[3], name: r[4] });
+            else if (sec === "ITEM" && r[3]) bundles[cur].items.push({ code: String(r[3]||"").toUpperCase(), name: r[4], qty: parseFloat(r[5])||1, isNB: String(r[9]||"").includes('비급여') });
+        });
+    }
+
+    function renderOptions() {
+        const s = document.getElementById('bundleSelect');
+        s.innerHTML = '<option value="">-- 처방 세트를 선택하세요 --</option>' + Object.keys(bundles).sort().map(k => `<option value="${k}">[${k}] ${bundles[k].name}</option>`).join('');
+    }
+
+    function loadBundle() {
+        const c = document.getElementById('bundleSelect').value; if (!c) return;
+        const b = bundles[c]; document.getElementById('resultContent').style.display = 'block';
+        document.getElementById('symptomDisplay').innerHTML = b.symptoms.join('<br>') || "기록 없음";
+        document.getElementById('diagList').innerHTML = b.diags.map(d => `<tr><td style="font-weight:700; color:#0052cc; width:25%">${d.code}</td><td>${d.name}</td></tr>`).join('');
+        const list = document.getElementById('itemList');
+        list.innerHTML = b.items.map(p => {
+            const info = masterDB.get(p.code.trim()) || { price: 0, name: p.name };
+            const isInsp = p.code.toLowerCase().includes('sono') || p.code.toLowerCase().includes('c-arm');
+            const lock = (p.isNB && !isInsp) ? '' : 'active';
+            return `<tr data-type="${p.isNB ? 'nonbenefit' : 'benefit'}">
+                <td style="font-weight:700; color:#666;">${p.code}</td>
+                <td><input type="text" value="${info.name}" style="border:none; background:transparent; width:100%;" readonly></td>
+                <td><input type="text" class="price" value="${fmt(info.price)}" oninput="this.value=fmt(clean(this.value)); calculate();"></td>
+                <td><input type="number" class="qty" value="${p.qty}" step="0.01" oninput="calculate()" style="color:#d73a49; font-weight:800; border:1px solid #eee; border-radius:4px; padding:5px; width:80%;"></td>
+                <td style="text-align:center;"><button class="lock-btn ${lock}" onclick="this.classList.toggle('active'); autoBalance();">${lock?'🔒':'🔓'}</button></td>
+            </tr>`;
+        }).join('');
+        autoBalance();
+    }
+
+    function calculate() {
+        let bSum = 0, nbSum = 0;
+        document.querySelectorAll('#itemList tr').forEach(r => {
+            const p = clean(r.querySelector('.price').value), q = parseFloat(r.querySelector('.qty').value)||0;
+            if (r.dataset.type === 'benefit') bSum += p * q; else nbSum += p * q;
+        });
+        const finalB = Math.floor((bSum * 0.3) / 10) * 10;
+        document.getElementById('benefitPay').innerText = fmt(finalB);
+        document.getElementById('finalPayment').innerText = fmt(Math.floor((finalB + nbSum) / 10) * 10);
+    }
+
+    function autoBalance() {
+        const target = clean(document.getElementById('targetPrice').value); calculate();
+        const adjs = Array.from(document.querySelectorAll('#itemList tr[data-type="nonbenefit"]')).filter(r => !r.querySelector('.lock-btn').classList.contains('active'));
+        if (adjs.length > 0) {
+            const first = adjs[0], price = clean(first.querySelector('.price').value);
+            if (price > 0) {
+                let other = 0;
+                document.querySelectorAll('#itemList tr').forEach(r => {
+                    if (r !== first && r.dataset.type === 'nonbenefit') other += clean(r.querySelector('.price').value) * (parseFloat(r.querySelector('.qty').value)||0);
+                });
+                const bPay = clean(document.getElementById('benefitPay').innerText);
+                first.querySelector('.qty').value = ((target - bPay - other) / price).toFixed(4);
+            }
+        }
+        calculate();
+    }
+    window.onload = init;
+</script>
+</body>
+</html>
