@@ -9,7 +9,7 @@
         :root { --primary: #333; --accent: #d73a49; --border: rgba(0, 0, 0, 0.1); }
         body { margin: 0; background-color: #ffffff; color: #333; font-family: 'Pretendard', sans-serif; min-height: 100vh; display: flex; flex-direction: column; align-items: center; }
         
-        /* [UI] 사용자 제공 통합 싱크 보드 UI 적용 */
+        /* [UI] 통합 싱크 보드 UI - 사용자 요청 그대로 적용 */
         #syncBoard { position: fixed; top: 10px; right: 20px; background: #fff; border: 1px solid #222; border-radius: 10px; padding: 12px 18px; font-size: 11px; z-index: 1000; box-shadow: 0 6px 20px rgba(0,0,0,0.1); width: 420px; }
         .sync-list { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid #eee; }
         .sync-item { display: flex; align-items: center; gap: 6px; }
@@ -19,22 +19,34 @@
         .tag-name { font-weight: 800; color: #666; }
         .st-val { font-weight: 600; padding: 1px 4px; border-radius: 3px; font-size: 9px; }
         .active-svr { color: #007bff; }
+        .active-loc { color: #28a745; }
         .fail-val { color: #dc3545; }
 
+        .manual-btn { width: auto; padding: 4px 10px; background: #f8f9fa; border: 1px solid #ddd; border-radius: 6px; cursor: pointer; font-size: 10px; font-weight: 700; color: #555; }
+
+        /* [UI] 워터마크 스타일 복구 */
+        .watermark { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 60%; opacity: 0.05; z-index: -1; pointer-events: none; }
+        header { width: 100%; padding: 40px 0; text-align: center; }
+        .top-logo { width: 220px; margin-bottom: 10px; }
+        
         .container { width: 1200px; max-width: 95%; margin: 0 auto; display: grid; grid-template-columns: 1.8fr 1.2fr; gap: 40px; padding-bottom: 100px; }
         .card { background: rgba(255, 255, 255, 0); border: 1px solid var(--border); border-radius: 12px; padding: 35px; backdrop-filter: blur(1px); margin-bottom: 30px; }
         .section-title { font-size: 0.85em; font-weight: 800; color: #999; margin: 30px 0 15px 0; border-left: 3px solid #333; padding-left: 12px; text-transform: uppercase; }
+        
         table { width: 100%; border-collapse: collapse; }
         th { border-bottom: 2px solid #eee; padding: 15px 10px; text-align: left; font-size: 0.8em; color: #aaa; }
         td { padding: 15px 10px; border-bottom: 1px solid #eee; font-size: 0.95em; }
+        
         .target-input { font-size: 3.5em; width: 240px; background: none; border: none; border-bottom: 4px solid #333; color: #333; text-align: right; font-weight: 900; outline: none; }
         .lock-btn { background: none; border: none; font-size: 1.3em; cursor: pointer; opacity: 0.2; }
         .lock-btn.active { opacity: 1; color: var(--accent); }
-        input[type="text"], input[type="number"] { background: rgba(0,0,0,0.02); border: 1px solid #ddd; border-radius: 6px; padding: 6px 10px; outline: none; width: 100%; }
+        
         #loader { position: fixed; inset: 0; background: white; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 10000; transition: 0.5s; }
     </style>
 </head>
 <body>
+
+<img src="https://raw.githubusercontent.com/jinsul-lab/openteam/main/jinsul-logo.png" class="watermark">
 
 <div id="syncBoard">
     <div class="sync-list">
@@ -45,18 +57,17 @@
     </div>
     <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 5px;">
         <span style="font-weight: 800; color: #888;">TOTAL DB: <span id="totalItems" style="color:#333;">0</span></span>
-        <span style="font-size: 9px; color: #aaa;">GITHUB AUTO MODE</span>
+        <button class="manual-btn" onclick="document.getElementById('manualCsv').click()">수동연동</button>
     </div>
+    <input type="file" id="manualCsv" style="display:none" accept=".csv" multiple onchange="handleManualFiles(this)">
 </div>
 
 <div id="loader">
     <div style="font-weight: 900; font-size: 1.8em; color: #333; letter-spacing: 5px;">JINSUL MEGA ENGINE (AUTO)</div>
-    <div id="statusText" style="font-size: 0.9em; color: #888; margin-top: 20px;">서버 데이터를 자동으로 로드 중입니다...</div>
+    <div id="statusText" style="font-size: 0.9em; color: #888; margin-top: 20px;">서버 데이터를 연동 중입니다... (0/4)</div>
 </div>
 
-<header style="padding: 40px 0; text-align: center;">
-    <img src="https://raw.githubusercontent.com/jinsul-lab/openteam/main/jinsul-logo.png" style="width: 220px; opacity: 0.8;">
-</header>
+<header><img src="https://raw.githubusercontent.com/jinsul-lab/openteam/main/jinsul-logo.png" class="top-logo"></header>
 
 <div class="container">
     <div class="main-column">
@@ -67,12 +78,13 @@
             </div>
             <div id="resultContent" style="display:none;">
                 <div class="section-title">Chief Complaint</div>
-                <div id="symptomDisplay" style="padding:25px; background:rgba(0,0,0,0.02); border-radius:12px; line-height:1.8; margin-bottom:30px;"></div>
-                <div class="section-title">Prescription / 역산</div>
+                <div id="symptomDisplay" style="padding:25px; background:rgba(0,0,0,0.02); border-radius:12px; font-size:1em; line-height:1.8; margin-bottom:30px;"></div>
+                <div class="section-title">Prescription / 수량 역산</div>
                 <table>
                     <thead><tr><th style="width:18%">코드</th><th>항목명</th><th style="width:22%">단가</th><th style="width:12%">수량</th><th style="width:8%">잠금</th></tr></thead>
                     <tbody id="itemList"></tbody>
                 </table>
+                <button style="background:#333; color:white; width:100%; padding:18px; border:none; border-radius:10px; font-weight:700; margin-top:20px; cursor:pointer;" onclick="autoBalance()">강제 역산 실행</button>
             </div>
         </div>
     </div>
@@ -82,7 +94,7 @@
             <input type="number" id="targetPrice" class="target-input" value="89000" oninput="autoBalance()"> 원
         </div>
         <div class="card" style="text-align: center; margin-top: 30px; border-top: 6px solid #333;">
-            <div id="finalPayment" style="font-size: 3.8em; font-weight: 900; color: #333;">0</div>
+            <div id="finalPayment" style="font-size: 3.8em; font-weight: 900; color: #333; letter-spacing: -3px;">0</div>
             <div style="margin-top:20px; font-size:1.1em; color:#888;">본인부담금: <span id="benefitPay" style="font-weight:700; color:#333;">0</span>원</div>
         </div>
     </div>
@@ -118,7 +130,6 @@
             try { text = new TextDecoder('utf-8', { fatal: true }).decode(buffer); } 
             catch { text = new TextDecoder('euc-kr').decode(buffer); }
             const count = parseCSV(text, cfg);
-            // 자료가 0건이면 서버X로 표기
             updateStatus(key, count > 0 ? "Server" : "서버X");
         } catch { updateStatus(key, "서버X"); }
     }
@@ -138,12 +149,27 @@
         return count;
     }
 
+    async function handleManualFiles(input) {
+        const files = Array.from(input.files);
+        for (const file of files) {
+            const buffer = await file.arrayBuffer();
+            let text;
+            try { text = new TextDecoder('utf-8', { fatal: true }).decode(buffer); } 
+            catch { text = new TextDecoder('euc-kr').decode(buffer); }
+            const key = file.name.includes('약가') ? 'drug' : (file.name.includes('재료') ? 'mat' : 'fee');
+            parseCSV(text, CONFIG[key] || CONFIG['fee']);
+            updateStatus(key, "Local");
+        }
+    }
+
     function updateStatus(key, status) {
         const el = document.getElementById('st-' + key), dot = document.getElementById('dot-' + key);
         if (!el || !dot) return;
         el.innerText = status;
         if (status === "서버X") { el.className = "st-val fail-val"; dot.className = "status-dot dot-fail"; }
-        else { el.className = "st-val active-svr"; dot.className = "status-dot dot-ok"; loadedCount++; }
+        else if (status === "Local") { el.className = "st-val active-loc"; dot.className = "status-dot dot-ok"; }
+        else { el.className = "st-val active-svr"; dot.className = "status-dot dot-ok"; }
+        if (status !== "서버X") loadedCount++;
         document.getElementById('totalItems').innerText = masterDB.size.toLocaleString();
         if (loadedCount >= 4 || masterDB.size > 0) {
             document.getElementById('loader').style.opacity = '0';
