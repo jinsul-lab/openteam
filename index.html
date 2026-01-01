@@ -3,13 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JINSUL - Integrated Consulting System</title>
+    <title>JINSUL - Integrated Case Verification</title>
     <style>
-        /* [UI 가이드라인 반영] 
-           1. Glassmorphism: opacity 0.0, backdrop-filter blur(1px)
-           2. Color: Minimalist Grey & White
-           3. Layout: Centered 
-        */
+        /* [Design Principle] Glassmorphism & Minimalist Grey */
         :root { 
             --primary-grey: #444444; 
             --accent-red: #d73a49;
@@ -17,56 +13,31 @@
         }
         
         body { 
-            margin: 0; 
-            background-color: #ffffff; 
-            color: #333333; 
-            font-family: 'Pretendard', sans-serif; 
-            position: relative; 
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center; /* 중앙 정렬 */
+            margin: 0; background-color: #ffffff; color: #333333; 
+            font-family: 'Pretendard', -apple-system, sans-serif; 
+            min-height: 100vh; display: flex; flex-direction: column; align-items: center;
         }
         
-        /* 중앙 워터마크 로고 */
+        /* 배경 워터마크 */
         .watermark {
             position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            width: 60%; opacity: 0.08; z-index: -1; pointer-events: none; filter: grayscale(1);
+            width: 60%; opacity: 0.06; z-index: -1; pointer-events: none; filter: grayscale(1);
         }
 
-        header { 
-            width: 100%; 
-            padding: 40px 0; 
-            text-align: center; 
-            background: transparent;
-        }
-        
-        /* 로고 상단 색상 및 크기 보정 */
-        .top-logo { 
-            width: 240px; 
-            filter: grayscale(1); /* 그레이 톤 유지 */
-            opacity: 0.8;
-            margin-bottom: 10px; 
-        }
+        header { width: 100%; padding: 40px 0; text-align: center; background: transparent; }
+        .top-logo { width: 220px; filter: grayscale(1); opacity: 0.8; margin-bottom: 10px; }
 
         .container { 
-            width: 1200px; /* 고정폭 중앙 정렬 */
-            max-width: 95%;
-            margin: 0 auto; 
-            display: grid; 
-            grid-template-columns: 1.8fr 1.2fr; 
-            gap: 30px; 
-            padding-bottom: 100px;
+            width: 1200px; max-width: 95%; margin: 0 auto; 
+            display: grid; grid-template-columns: 1.8fr 1.2fr; gap: 30px; padding-bottom: 100px;
         }
 
-        /* 2. 카드 및 표: 투명도 0.0 (Glassmorphism) */
+        /* [UI] 투명도 0.0 & 블러 1px */
         .card { 
-            background: rgba(255, 255, 255, 0); /* 100% 투명 */
+            background: rgba(255, 255, 255, 0); 
             border: 1px solid var(--border-light); 
-            border-radius: 12px; 
-            padding: 30px; 
-            backdrop-filter: blur(1px); /* 요청하신 블러 효과 */
-            margin-bottom: 20px;
+            border-radius: 12px; padding: 30px; 
+            backdrop-filter: blur(1px); margin-bottom: 20px;
         }
 
         table { width: 100%; border-collapse: collapse; background: transparent !important; }
@@ -74,17 +45,12 @@
         td { padding: 12px; border-bottom: 1px solid #eee; background: transparent !important; }
 
         input, select { 
-            background: rgba(255, 255, 255, 0.2); 
-            border: 1px solid #ddd; 
-            padding: 10px; border-radius: 6px; width: 100%; 
-            color: #333;
+            background: rgba(255, 255, 255, 0.4); 
+            border: 1px solid #ddd; padding: 10px; border-radius: 6px; width: 100%; 
         }
 
-        /* 목표가 박스 색상 수정 (지나치게 튀는 색 제거) */
         .target-box { 
-            background: rgba(0, 0, 0, 0.03); 
-            border: 1px solid var(--border-light);
-            color: var(--primary-grey); 
+            background: rgba(0, 0, 0, 0.02); border: 1px solid var(--border-light);
             padding: 40px; border-radius: 15px; text-align: center; 
         }
         .target-input { 
@@ -93,21 +59,14 @@
             text-align: right; font-weight: 900; outline: none; 
         }
 
-        /* 3. 하단 카피라이트 스타일 보정 */
         footer { 
-            width: 100%;
-            text-align: center; 
-            padding: 40px 0; 
-            color: #aaaaaa; 
-            font-size: 0.85em; 
-            font-weight: 500; 
-            letter-spacing: 0.5px;
-            margin-top: auto;
+            width: 100%; text-align: center; padding: 40px 0; 
+            color: #aaaaaa; font-size: 0.85em; font-weight: 500; 
+            letter-spacing: 1px; margin-top: auto;
         }
 
-        .btn { padding: 15px 25px; border-radius: 8px; border: 1px solid #ddd; font-weight: 700; cursor: pointer; transition: 0.2s; }
+        .btn { padding: 15px 25px; border-radius: 8px; border: 1px solid #ddd; font-weight: 700; cursor: pointer; }
         .btn-main { background: #333; color: white; width: 100%; margin-top: 20px; font-size: 1.1em; border: none; }
-        .btn-main:hover { background: #000; }
         .lock-btn { background: none; border: none; font-size: 1.2em; cursor: pointer; opacity: 0.2; }
         .lock-btn.active { opacity: 1; color: var(--accent-red); }
 
@@ -119,8 +78,9 @@
 <img src="https://raw.githubusercontent.com/jinsul-lab/openteam/main/jinsul-logo.png" class="watermark" onerror="this.style.display='none'">
 
 <div id="loader">
-    <div style="font-weight: 900; font-size: 1.2em; color: #333; margin-bottom: 10px; letter-spacing: 2px;">JINSUL DATA LOADING...</div>
+    <div style="font-weight: 900; font-size: 1.2em; color: #333; margin-bottom: 10px;">JINSUL DATA LOADING...</div>
     <div id="statusText" style="font-size: 0.8em; color: #888;">데이터를 불러오는 중입니다.</div>
+    <div id="errorLog" style="color:red; font-size:0.8em; margin-top:10px;"></div>
 </div>
 
 <header>
@@ -135,7 +95,7 @@
                 <select id="bundleSelect" style="flex: 1; font-weight: 700;">
                     <option value="">-- 불러올 묶음코드를 선택하세요 --</option>
                 </select>
-                <button class="btn" onclick="loadBundle()">데이터 로드</button>
+                <button class="btn" onclick="loadBundle()">로드</button>
             </div>
 
             <table>
@@ -187,7 +147,7 @@
         "의치과수가(20260101).csv",
         "약가(20260101).csv",
         "치료재료대(20250401).csv",
-        "code.xls"
+        "code.xls - sheet.csv"
     ];
 
     let masterDB = {};
@@ -195,14 +155,15 @@
 
     async function init() {
         const status = document.getElementById('statusText');
+        const errLog = document.getElementById('errorLog');
         try {
             for (const file of FILES) {
-                status.innerText = `${file} 동기화 중...`;
+                status.innerText = `${file} 분석 중...`;
                 const res = await fetch(REPO_URL + encodeURIComponent(file));
-                if (!res.ok) throw new Error(`로드 실패: ${file}`);
+                if (!res.ok) throw new Error(`파일을 찾을 수 없음: ${file}`);
 
                 const arrayBuffer = await res.arrayBuffer();
-                const text = new TextDecoder('euc-kr').decode(arrayBuffer);
+                const text = new TextDecoder('euc-kr').decode(arrayBuffer); // EUC-KR 디코딩 적용
                 
                 if (file.includes('code.xls')) {
                     parseBundle(text);
@@ -213,40 +174,45 @@
             document.getElementById('loader').style.display = 'none';
             renderOptions();
         } catch (e) {
-            status.innerText = "❌ 데이터 로딩 에러";
+            status.innerText = "❌ 로딩 실패";
+            errLog.innerText = e.message;
             console.error(e);
         }
     }
 
     function parseMaster(text) {
-        const rows = text.split('\n').slice(1);
-        rows.forEach(row => {
-            const cols = row.split(',');
-            const code = cols[0]?.trim().toUpperCase();
-            if (code) {
-                masterDB[code] = {
-                    name: cols[3]?.trim() || cols[1]?.trim() || "항목명 없음",
-                    price: parseInt(cols[7]) || parseInt(cols[4]) || 0
-                };
+        const lines = text.split(/\r?\n/);
+        lines.slice(1).forEach(line => {
+            const cols = line.split(',');
+            if (cols.length > 1) {
+                const code = cols[0].replace(/"/g, '').trim().toUpperCase();
+                if (code) {
+                    masterDB[code] = {
+                        name: (cols[1] || cols[3] || "이름없음").replace(/"/g, '').trim(),
+                        price: parseInt((cols[7] || cols[4] || "0").replace(/"/g, '')) || 0
+                    };
+                }
             }
         });
     }
 
     function parseBundle(text) {
-        const rows = text.split('\n').slice(1);
-        rows.forEach(row => {
-            const cols = row.split(',');
-            const bCode = cols[0]?.trim();
-            if (bCode) {
-                if (!bundles[bCode]) bundles[bCode] = { name: cols[1], items: [] };
-                const subCode = cols[3]?.trim().toUpperCase();
-                if (subCode && subCode !== "ID") {
-                    bundles[bCode].items.push({
-                        code: subCode,
-                        name: cols[4],
-                        qty: parseFloat(cols[5]) || 1,
-                        type: cols[9]?.includes('비급여') ? 'nonbenefit' : 'benefit'
-                    });
+        const lines = text.split(/\r?\n/);
+        lines.slice(1).forEach(line => {
+            const cols = line.split(',');
+            if (cols.length > 3) {
+                const bCode = cols[0].replace(/"/g, '').trim();
+                if (bCode) {
+                    if (!bundles[bCode]) bundles[bCode] = { name: cols[1].replace(/"/g, ''), items: [] };
+                    const subCode = cols[3].replace(/"/g, '').trim().toUpperCase();
+                    if (subCode && subCode !== "ID") {
+                        bundles[bCode].items.push({
+                            code: subCode,
+                            name: (cols[4] || "").replace(/"/g, ''),
+                            qty: parseFloat(cols[5]) || 1,
+                            type: line.includes('비급여') ? 'nonbenefit' : 'benefit'
+                        });
+                    }
                 }
             }
         });
@@ -254,12 +220,13 @@
 
     function renderOptions() {
         const select = document.getElementById('bundleSelect');
-        for (let code in bundles) {
+        const sortedCodes = Object.keys(bundles).sort();
+        sortedCodes.forEach(code => {
             const opt = document.createElement('option');
             opt.value = code;
-            opt.innerText = `[세트] ${bundles[code].name}`;
+            opt.innerText = `[${code}] ${bundles[code].name}`;
             select.appendChild(opt);
-        }
+        });
     }
 
     function loadBundle() {
@@ -315,7 +282,7 @@
         const nbRows = Array.from(document.querySelectorAll('tr[data-type="nonbenefit"]'));
         const adjustable = nbRows.filter(r => !r.querySelector('.lock-btn').classList.contains('active'));
 
-        if (adjustable.length === 0) return alert("비급여 항목의 잠금을 풀어주세요.");
+        if (adjustable.length === 0) return alert("단가를 조정할 비급여 항목의 잠금을 풀어주세요.");
 
         const targetRow = adjustable[0];
         const qty = parseFloat(targetRow.querySelector('.qty').value) || 1;
