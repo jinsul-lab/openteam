@@ -3,40 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JINSUL - High Speed Verification</title>
+    <title>JINSUL - 2026 High Stability System</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         :root { --primary-grey: #333; --accent-red: #d73a49; --border: rgba(0, 0, 0, 0.1); }
         body { margin: 0; background-color: #f6f6f7; color: #333; font-family: 'Pretendard', sans-serif; min-height: 100vh; display: flex; flex-direction: column; align-items: center; overflow-x: hidden; }
         
-        /* [UI] 통합 싱크 보드 */
+        /* [UI] 통합 싱크 보드 - 진행률 시인성 강화 */
         #syncBoard { position: fixed; top: 10px; right: 20px; background: #fff; border: 1px solid #222; border-radius: 10px; padding: 12px 18px; font-size: 11px; z-index: 1000; box-shadow: 0 6px 20px rgba(0,0,0,0.1); width: 420px; }
         .sync-list { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid #eee; }
         .sync-item { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 80px; }
         .tag-name { font-weight: 800; color: #666; font-size: 10px; }
         .st-box { display: flex; gap: 4px; }
         .st-val { font-weight: 700; padding: 2px 4px; border-radius: 3px; font-size: 9px; background: #f5f5f5; color: #bbb; display: flex; align-items: center; gap: 2px; }
+        
         .active-svr { color: #007bff !important; background: #eef6ff !important; }
         .active-loc { color: #28a745 !important; background: #effff3 !important; }
         .fail-val { color: #dc3545 !important; background: #fff0f1 !important; }
         .loading-val { color: #856404 !important; background: #fff3cd !important; border: 1px solid #ffeeba; }
 
-        /* [디자인 이식] 워터마크 */
+        /* [디자인] JINSUL 고유 스타일 */
         .wm { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; z-index: 0; }
         .wm img { width: min(760px, 78vw); opacity: .10; user-select: none; filter: grayscale(1) saturate(0) brightness(.65) contrast(1.05); }
-        
         header { width: 100%; padding: 30px 0; text-align: center; position: relative; z-index: 1; }
-        /* [디자인 이식] 로고 (170px) */
         .top-logo { width: 170px; height: auto; display: block; margin: 0 auto 10px; filter: grayscale(1) saturate(0) brightness(.45) contrast(1.15); opacity: 0.8; }
         
         .container { width: 1550px; max-width: 98%; margin: 0 auto; display: grid; grid-template-columns: 1.8fr 1.2fr; gap: 40px; padding-bottom: 100px; position: relative; z-index: 1; }
-        /* [디자인 이식] 카드 투명도 10% */
         .card { background: rgba(255, 255, 255, 0.10); border: 1px solid var(--border); border-radius: 12px; padding: 35px; backdrop-filter: blur(1px); -webkit-backdrop-filter: blur(1px); margin-bottom: 30px; }
-        
-        .section-title { font-size: 0.85em; font-weight: 800; color: #999; margin: 30px 0 15px 0; border-left: 3px solid #333; padding-left: 12px; text-transform: uppercase; }
-        table { width: 100%; border-collapse: collapse; background: transparent; }
-        th { border-bottom: 2px solid #eee; padding: 12px 10px; text-align: left; font-size: 0.8em; color: #aaa; background: rgba(243, 244, 246, 0.5); }
-        td { padding: 12px 10px; border-bottom: 1px solid #eee; font-size: 0.95em; }
         
         .target-input { font-size: 3.5em; width: 240px; background: none; border: none; border-bottom: 4px solid #333; color: #333; text-align: right; font-weight: 900; outline: none; }
         .lock-btn { background: none; border: none; font-size: 1.3em; cursor: pointer; opacity: 0.2; }
@@ -52,12 +45,12 @@
 <div id="syncBoard">
     <div class="sync-list" id="syncStatusList"></div>
     <div class="upload-btn-area" style="margin-top:5px;">
-        <button onclick="document.getElementById('manualUpload').click()" style="width:100%; padding:7px; background:#333; color:#fff; border:none; border-radius:6px; cursor:pointer; font-size:10px; font-weight:bold;">📂 2026 수가 파일 업로드</button>
+        <button onclick="document.getElementById('manualUpload').click()" style="width:100%; padding:7px; background:#333; color:#fff; border:none; border-radius:6px; cursor:pointer; font-size:10px; font-weight:bold;">📂 연동 안될 시 수가 파일 수동 업로드</button>
         <input type="file" id="manualUpload" accept=".csv, .xlsb, .xlsx" multiple style="display:none;" onchange="handleManualUpload(this)">
     </div>
     <div style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 9px; font-weight: 700; color: #aaa;">
-        <span>데이터 로드: <span id="totalItems" style="color:#333;">0</span>건</span>
-        <span style="cursor:pointer; color:#007bff;" onclick="location.reload()">시스템 갱신 ↻</span>
+        <span>시스템 마스터: <span id="totalItems" style="color:#333;">0</span>건 가동</span>
+        <span style="cursor:pointer; color:#007bff;" onclick="location.reload()">새로고침 ↻</span>
     </div>
 </div>
 
@@ -67,7 +60,9 @@
     <div class="main-column">
         <div class="card">
             <div style="display: flex; gap: 12px; margin-bottom: 35px;">
-                <select id="bundleSelect" style="flex: 1; font-weight: 700; font-size: 1.1em; border: 2px solid #333; border-radius: 8px; padding: 12px; outline:none; background: #fff;"></select>
+                <select id="bundleSelect" style="flex: 1; font-weight: 700; font-size: 1.1em; border: 2px solid #333; border-radius: 8px; padding: 12px; outline:none; background: #fff;">
+                    <option value="">데이터 로딩 중입니다. 잠시만 기다려주세요...</option>
+                </select>
                 <button onclick="loadBundle()" style="padding:0 40px; border-radius:10px; border:1px solid #ddd; font-weight:700; cursor:pointer; background: #333; color:#fff;">조회하기</button>
             </div>
             <div id="resultContent" style="display:none;">
@@ -86,15 +81,6 @@
         <div class="card" style="background: rgba(0,0,0,0.03); text-align: center; padding: 45px;">
             <div style="font-size: 0.85em; color: #888; margin-bottom: 12px; font-weight: 600;">TARGET AMOUNT</div>
             <input type="number" id="targetPrice" class="target-input" value="89000" oninput="autoBalance()"> 원
-            <div style="margin-top:30px;">
-                <select id="insuType" onchange="calculate()" style="padding:12px; border-radius:8px; width:100%; border:1px solid #ddd; background: #fff;">
-                    <option value="normal">일반 건강보험 (30%)</option>
-                    <option value="senior">노인 (65세 이상)</option>
-                    <option value="aid_zero">의료급여 (0원)</option>
-                    <option value="aid_rx">의료급여 (1,000원)</option>
-                    <option value="aid_no_rx">의료급여 (1,500원)</option>
-                </select>
-            </div>
         </div>
         <div class="card" style="text-align: center; margin-top: 30px; border-top: 6px solid #333;">
             <div id="finalPayment" style="font-size: 4em; font-weight: 900; color: #333; letter-spacing: -3px;">0</div>
@@ -106,30 +92,24 @@
 <footer>© JINSUL · 경험과 가치를 현실화하는 컨설팅</footer>
 
 <script id="worker-script" type="text/javascript">
-    // [핵심] 1~3번 시트만 골라내는 초고속 워커 스크립트
     self.onmessage = async function(e) {
-        const { url, buffer } = e.data;
+        const { buffer } = e.data;
         importScripts('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');
         try {
-            let dataBuffer = buffer || await (await fetch(url)).arrayBuffer();
-            // 최적화: 시트 이름만 먼저 읽어옴
-            const workbook = XLSX.read(new Uint8Array(dataBuffer), { type: 'array', cellStyles: false, bookSheets: true });
-            
-            // 사용자 요청: 1~3번 시트까지만 처리
+            // 속도 극대화를 위해 스타일 및 불필요 데이터 완전 배제
+            const workbook = XLSX.read(new Uint8Array(buffer), { type: 'array', cellStyles: false, cellNF: false });
             const targetSheets = workbook.SheetNames.slice(0, 3);
             let master = [];
             
-            targetSheets.forEach((sheetName, sIdx) => {
+            targetSheets.forEach((sheetName) => {
                 const sheet = workbook.Sheets[sheetName];
                 const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-                
                 for (let i = 0; i < rows.length; i++) {
                     const r = rows[i];
-                    const code = String(r[2] || '').trim().toUpperCase(); // C코드
-                    if (code && code.length >= 5) {
+                    const code = String(r[2] || '').trim().toUpperCase();
+                    if (code.length >= 5) {
                         master.push([code, String(r[3] || '명칭없음').trim(), parseInt(String(r[5] || '0').replace(/[^0-9]/g, '')) || 0]);
                     }
-                    if (i % 20000 === 0) self.postMessage({ type: 'progress', msg: `${sIdx+1}/3 시트 분석 중...` });
                 }
             });
             self.postMessage({ type: 'done', data: master });
@@ -148,14 +128,11 @@
     const worker = new Worker(URL.createObjectURL(blob));
 
     worker.onmessage = function(e) {
-        const el = document.getElementById('srv-fee');
-        if (e.data.type === 'progress') {
-            el.innerHTML = e.data.msg;
-            el.className = "st-val loading-val";
-        } else if (e.data.type === 'done') {
+        if (e.data.type === 'done') {
             e.data.data.forEach(item => masterDB.set(item[0], { name: item[1], price: item[2] }));
-            el.innerHTML = `서버✔`; el.className = "st-val active-svr";
-            document.getElementById('totalItems').innerText = masterDB.size.toLocaleString();
+            updateStatus('fee', "Server");
+        } else if (e.data.type === 'error') {
+            updateStatus('fee', "서버❌");
         }
     };
 
@@ -164,13 +141,17 @@
         ['fee','drug','mat','bundle'].forEach(id => {
             const n = {fee:'의치과수가',drug:'약가',mat:'치료재료대',bundle:'처방세트'}[id];
             const div = document.createElement('div'); div.className = 'sync-item';
-            div.innerHTML = `<span class="tag-name">${n}</span><div class="st-box"><span id="srv-${id}" class="st-val">연결..</span><span id="loc-${id}" class="st-val fail-val">로컬❌</span></div>`;
+            div.innerHTML = `<span class="tag-name">${n}</span><div class="st-box"><span id="srv-${id}" class="st-val">대기..</span><span id="loc-${id}" class="st-val fail-val">로컬❌</span></div>`;
             board.appendChild(div);
         });
 
-        // 1~3번 시트만 타겟팅하여 로드 시작
-        document.getElementById('srv-fee').innerHTML = "받는 중..";
-        worker.postMessage({ url: REPO + MASTER_FILE });
+        // 진행률이 안 뜨는 문제를 방지하기 위한 강력한 다운로드 로직
+        fetchWithProgress(REPO + MASTER_FILE).then(buffer => {
+            if (buffer) {
+                document.getElementById('srv-fee').innerHTML = "시트분석 중";
+                worker.postMessage({ buffer });
+            }
+        });
 
         fetchSource(REPO + "약가.csv", { code: 0, name: 6, price: 3 }, 'drug');
         fetchSource(REPO + "치료재료대.csv", { code: 0, name: 2, price: 5 }, 'mat');
@@ -179,6 +160,38 @@
             parseBundle(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1 }));
             updateStatus('bundle', "Server");
         });
+    }
+
+    async function fetchWithProgress(url) {
+        const el = document.getElementById('srv-fee');
+        try {
+            const response = await fetch(url + "?t=" + Date.now());
+            const reader = response.body.getReader();
+            const contentLength = +response.headers.get('Content-Length') || 25000000; // 크기 정보 없으면 25MB로 가정
+            let receivedLength = 0;
+            let chunks = [];
+
+            while(true) {
+                const {done, value} = await reader.read();
+                if (done) break;
+                chunks.push(value);
+                receivedLength += value.length;
+                let pct = Math.min(99, Math.floor((receivedLength / contentLength) * 100));
+                el.innerHTML = `다운 ${pct}%`;
+                el.className = "st-val loading-val";
+            }
+            
+            let allChunks = new Uint8Array(receivedLength);
+            let position = 0;
+            for(let chunk of chunks) {
+                allChunks.set(chunk, position);
+                position += chunk.length;
+            }
+            return allChunks.buffer;
+        } catch (err) {
+            el.innerHTML = "서버❌"; el.className = "st-val fail-val";
+            return null;
+        }
     }
 
     async function fetchSource(url, cfg, key) {
@@ -203,23 +216,21 @@
 
     function handleManualUpload(input) {
         const file = input.files[0]; if(!file) return;
-        const feeEl = document.getElementById('loc-fee');
-        feeEl.innerHTML = "시트 분석.."; feeEl.className = "st-val loading-val";
+        document.getElementById('loc-fee').innerHTML = "수동 분석중";
         file.arrayBuffer().then(buf => worker.postMessage({ buffer: buf }));
     }
 
     function parseBundle(data) {
-        let cur = null, sec = "";
+        let cur = null;
         data.forEach(r => {
             const a = String(r[0]||"").trim(), c = String(r[2]||"").trim();
             if (a.startsWith('+') || a.startsWith('Z')) {
                 cur = a; bundles[cur] = { name: String(r[1]||a).trim(), symptoms: [], diags: [], items: [] };
-                sec = ""; return;
+            } else if (cur) {
+                if (c === "증상") bundles[cur].symptoms.push(r[4]);
+                else if (c === "상병") bundles[cur].diags.push({ code: r[3], name: r[4] });
+                else if (c === "처방") bundles[cur].items.push({ code: String(r[3]).toUpperCase(), name: r[4], qty: parseFloat(r[5])||1, isNB: String(r[9]||"").includes('비급여') });
             }
-            if (!cur) return;
-            if (c === "증상") sec = "CC"; else if (c === "처방") sec = "ITEM";
-            if (sec === "CC" && r[4] && !String(r[4]).includes('PLAN')) bundles[cur].symptoms.push(r[4]);
-            else if (sec === "ITEM" && r[3]) bundles[cur].items.push({ code: String(r[3]).toUpperCase(), name: r[4], qty: parseFloat(r[5])||1, isNB: String(r[9]||"").includes('비급여') });
         });
     }
 
@@ -232,11 +243,11 @@
         const c = document.getElementById('bundleSelect').value; if (!c) return;
         const b = bundles[c]; document.getElementById('resultContent').style.display = 'block';
         document.getElementById('symptomDisplay').innerHTML = b.symptoms.join('<br>') || "기록 없음";
+        document.getElementById('diagList').innerHTML = b.diags.map(d => `<tr><td style="font-weight:700; color:#0052cc; width:25%">${d.code}</td><td>${d.name}</td></tr>`).join('');
         const list = document.getElementById('itemList');
         list.innerHTML = b.items.map(p => {
             const info = masterDB.get(p.code.trim()) || { price: 0, name: p.name };
-            const isInsp = p.code.toLowerCase().includes('sono') || p.code.toLowerCase().includes('c-arm');
-            const lock = (p.isNB && !isInsp) ? '' : 'active';
+            const lock = (p.isNB && !p.code.toLowerCase().includes('sono') && !p.code.toLowerCase().includes('c-arm')) ? '' : 'active';
             return `<tr data-type="${p.isNB ? 'nonbenefit' : 'benefit'}">
                 <td style="font-weight:700; color:#666;">${p.code}</td>
                 <td><input type="text" value="${info.name}" style="border:none; background:transparent;" readonly></td>
@@ -252,7 +263,7 @@
         let bSum = 0, nbSum = 0;
         document.querySelectorAll('#itemList tr').forEach(r => {
             const p = clean(r.querySelector('.price').value), q = parseFloat(r.querySelector('.qty').value)||0;
-            if (r.dataset.type === 'benefit') bSum += p * q; else nbSum += p * q;
+            r.dataset.type === 'benefit' ? bSum += p * q : nbSum += p * q;
         });
         const finalB = Math.floor((bSum * 0.3) / 10) * 10;
         document.getElementById('benefitPay').innerText = fmt(finalB);
@@ -267,9 +278,7 @@
             if (price > 0) {
                 let other = 0;
                 document.querySelectorAll('#itemList tr').forEach(r => {
-                    if (r === first) return;
-                    const p = clean(r.querySelector('.price').value), q = parseFloat(r.querySelector('.qty').value)||0;
-                    if (r.dataset.type === 'nonbenefit') other += p * q;
+                    if (r !== first && r.dataset.type === 'nonbenefit') other += clean(r.querySelector('.price').value) * (parseFloat(r.querySelector('.qty').value)||0);
                 });
                 const bPay = clean(document.getElementById('benefitPay').innerText);
                 first.querySelector('.qty').value = ((target - bPay - other) / price).toFixed(4);
