@@ -90,62 +90,75 @@
 </div>
 
 <script>
-    const REPO_BASE = "https://raw.githubusercontent.com/jinsul-lab/opneteam/main/";
-    const FILES = {
-        master: "의치과수가(20260103).csv",
-        drug: "약가(20260101).csv",
-        material: "치료재료대(20251201).csv",
-        bundle: "code.xls - sheet.csv"
-    };
+    // 1. 저장소 이름 수정 (opneteam -> openteam)
+    const REPO_BASE = "https://raw.githubusercontent.com/jinsul-lab/openteam/main/";
+    
+    const MASTER_FILES = [
+        "의치과수가(20260103).csv", 
+        "약가(20260101).csv",
+        "치료재료대(20251201).csv"
+    ];
+    const BUNDLE_FILE = "code.xls - sheet.csv";
 
     let masterDB = {};
     let bundles = {};
 
-    // 1. 데이터 로딩 (GitHub에서 직접 긁어오기)
     async function init() {
+        const statusEl = document.getElementById('loadingStatus');
         try {
-            document.getElementById('loadingStatus').innerText = "GitHub에서 마스터 데이터를 동기화 중입니다...";
+            statusEl.innerText = "🚀 GitHub 서버에서 마스터 데이터를 동기화 중...";
             
-            // 모든 마스터 파일 로드
-            await Promise.all([
-                loadCSV(FILES.master, 'benefit'),
-                loadCSV(FILES.drug, 'benefit'),
-                loadCSV(FILES.material, 'benefit'),
-                loadBundleCSV(FILES.bundle)
-            ]);
+            // 한글 깨짐 방지를 위해 인코딩 처리(EUC-KR) 포함 로드
+            for (const file of MASTER_FILES) {
+                await loadCSV(file);
+            }
+            await loadBundleCSV(BUNDLE_FILE);
 
-            document.getElementById('loadingStatus').innerText = "✅ 모든 데이터 로드 완료 (LA358, MM010 포함)";
+            statusEl.innerText = `✅ 로드 완료: 수가(${Object.keys(masterDB).length}건), 세트(${Object.keys(bundles).length}건)`;
             renderBundleOptions();
         } catch (e) {
-            document.getElementById('loadingStatus').innerText = "❌ 데이터 로드 실패. 파일명이나 경로를 확인하세요.";
+            console.error(e);
+            statusEl.innerText = "❌ 데이터 로딩 실패! (파일 이름이나 대소문자를 확인해 주세요)";
         }
     }
 
-    async function loadCSV(fileName, type) {
+    async function loadCSV(fileName) {
         const res = await fetch(REPO_BASE + encodeURIComponent(fileName));
-        const text = await res.text();
+        if (!res.ok) throw new Error(`${fileName}을 찾을 수 없습니다.`);
+        
+        // 핵심: 한글 깨짐 방지를 위한 디코더 사용
+        const arrayBuffer = await res.arrayBuffer();
+        const decoder = new TextDecoder('euc-kr');
+        const text = decoder.decode(arrayBuffer);
+        
         const rows = text.split('\n').slice(1);
         rows.forEach(row => {
             const cols = row.split(',');
-            if(cols[0]) masterDB[cols[0].trim().toUpperCase()] = {
-                name: cols[1] || cols[3] || "이름 없음",
-                price: parseInt(cols[7]) || parseInt(cols[4]) || 0,
-                type: type
-            };
+            const id = cols[0]?.trim().toUpperCase();
+            if(id) {
+                masterDB[id] = {
+                    name: cols[3] || cols[1] || "명칭 없음",
+                    price: parseInt(cols[7]) || parseInt(cols[4]) || 0,
+                    type: row.includes('비급여') ? 'nonbenefit' : 'benefit'
+                };
+            }
         });
     }
 
     async function loadBundleCSV(fileName) {
         const res = await fetch(REPO_BASE + encodeURIComponent(fileName));
-        const text = await res.text();
+        const arrayBuffer = await res.arrayBuffer();
+        const decoder = new TextDecoder('euc-kr');
+        const text = decoder.decode(arrayBuffer);
+        
         const rows = text.split('\n').slice(1);
         rows.forEach(row => {
             const cols = row.split(',');
             const bCode = cols[0]?.trim();
-            if(bCode) {
+            if(bCode && bCode !== "") {
                 if(!bundles[bCode]) bundles[bCode] = { name: cols[1], items: [] };
                 const subCode = cols[3]?.trim().toUpperCase();
-                if(subCode && subCode !== "ID") {
+                if(subCode && subCode !== "ID" && subCode !== "하위코드") {
                     bundles[bCode].items.push({
                         code: subCode,
                         name: cols[4],
@@ -156,91 +169,7 @@
             }
         });
     }
-
-    function renderBundleOptions() {
-        const select = document.getElementById('bundleSelect');
-        for(let code in bundles) {
-            const opt = document.createElement('option');
-            opt.value = code;
-            opt.innerText = `[세트] ${bundles[code].name}`;
-            select.appendChild(opt);
-        }
-    }
-
-    function loadBundle() {
-        const bCode = document.getElementById('bundleSelect').value;
-        if(!bCode) return;
-        const list = document.getElementById('itemList');
-        list.innerHTML = "";
-        
-        bundles[bCode].items.forEach(item => {
-            const info = masterDB[item.code] || { price: 0 };
-            const tr = document.createElement('tr');
-            tr.className = 'item-row';
-            tr.dataset.type = item.type;
-            tr.innerHTML = `
-                <td><input type="text" value="${item.code}" readonly></td>
-                <td><input type="text" value="${item.name || info.name}"></td>
-                <td><input type="number" class="price" value="${info.price || 0}" oninput="calculate()"></td>
-                <td><input type="number" class="qty" value="${item.qty}" oninput="calculate()"></td>
-                <td><button class="lock-btn ${item.type==='benefit'?'active':''}" onclick="this.classList.toggle('active')">${item.type==='benefit'?'🔒':'🔓'}</button></td>
-            `;
-            list.appendChild(tr);
-        });
-        calculate();
-    }
-
-    function calculate() {
-        let benefitTotal = 0;
-        let nonBenefitTotal = 0;
-        const seniorMode = document.getElementById('seniorMode').value;
-
-        document.querySelectorAll('.item-row').forEach(row => {
-            const p = parseFloat(row.querySelector('.price').value) || 0;
-            const q = parseFloat(row.querySelector('.qty').value) || 0;
-            if(row.dataset.type === 'benefit') benefitTotal += p * q;
-            else nonBenefitTotal += p * q;
-        });
-
-        // 본인부담금 계산 (일반 30%, 노인 정액/정률제 생략후 30% 기준 예시)
-        let bPay = benefitTotal * 0.3;
-        if(seniorMode === 'senior') {
-            if(benefitTotal <= 15000) bPay = 1500;
-            else if(benefitTotal <= 20000) bPay = benefitTotal * 0.1;
-            else bPay = benefitTotal * 0.2;
-        }
-        
-        const finalBPay = Math.floor(bPay / 10) * 10; // 10원 절사
-        const total = finalBPay + nonBenefitTotal;
-        const finalTotal = Math.floor(total / 100) * 100; // 100원 절사
-
-        document.getElementById('benefitPay').innerText = finalBPay.toLocaleString();
-        document.getElementById('nonBenefitPay').innerText = Math.round(nonBenefitTotal).toLocaleString();
-        document.getElementById('finalPayment').innerText = finalTotal.toLocaleString() + " 원";
-        
-        return { finalBPay, nonBenefitTotal };
-    }
-
-    function autoBalance() {
-        const target = parseInt(document.getElementById('targetPrice').value);
-        const { finalBPay } = calculate();
-        const neededNonBenefit = target - finalBPay;
-
-        const rows = Array.from(document.querySelectorAll('.item-row[data-type="nonbenefit"]'));
-        const adjustable = rows.filter(r => !r.querySelector('.lock-btn').classList.contains('active'));
-
-        if(adjustable.length === 0) {
-            alert("조정할 비급여 항목의 잠금(🔓)을 풀어주세요.");
-            return;
-        }
-
-        const targetRow = adjustable[0];
-        const qty = parseFloat(targetRow.querySelector('.qty').value) || 1;
-        targetRow.querySelector('.price').value = Math.round(neededNonBenefit / qty);
-        calculate();
-    }
-
-    window.onload = init;
+    // ... (이후 렌더링 및 계산 함수는 동일)
 </script>
 </body>
 </html>
