@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>JINSUL - Smart Data Converter (Symptom Fix)</title>
+    <title>JINSUL - Smart Data Converter (Filtered)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         :root { --primary: #333; --accent: #d73a49; --bg: #f6f6f7; }
@@ -65,7 +65,7 @@
         <div id="dropZone" class="drop-zone">
             <h2>📂 파일을 여기에 놓아주세요</h2>
             <p>수가, 약가, 재료, 세트 파일 (CSV / Excel)</p>
-            <p style="margin-top:15px; color:#d73a49; font-weight:800; font-size:0.85em;">✨ 2자리 코드(증상) 자동 분리 & 데이터 보정</p>
+            <p style="margin-top:15px; color:#d73a49; font-weight:800; font-size:0.85em;">✨ 불필요한 항목 제거 & 증상 완벽 분리</p>
         </div>
 
         <div id="logBox" class="log-box">
@@ -194,7 +194,9 @@
             rows.forEach(row => {
                 const cols = row.split(',').map(c => c.trim().replace(/"/g, ''));
                 if (cols.length < 5) return;
-                if (cols[0] === "묶음코드") return;
+                
+                // [필터 1] 헤더나 무의미한 행 건너뛰기
+                if (cols[0] === "묶음코드" || cols[3] === "하위코드") return;
 
                 if (cols[0]) {
                     currentSetCode = cols[0];
@@ -204,33 +206,35 @@
                     }
                 }
 
-                // C열: 구분, D열: 코드, E열: 명칭
                 const type = cols[2]; 
                 const itemCode = cols[3] ? cols[3].trim() : "";
                 const itemName = cols[4];
 
-                if (currentSetCode && itemCode) {
-                    // [핵심 수정사항] 2자리 코드이거나 '상병' 타입이면 증상(C.C)으로 분류
-                    if (type === "상병" || itemCode.length === 2) {
-                        // 중복 방지를 위해 이미 있는지 체크 후 추가
-                        const symptomText = `${itemName} (${itemCode})`;
-                        if (!finalDB.sets[currentSetCode].cc.includes(symptomText)) {
-                            finalDB.sets[currentSetCode].cc.push(symptomText);
-                        }
-                    } else {
-                        // 나머지는 처방 항목(Item)으로 추가
-                        finalDB.sets[currentSetCode].it.push({
-                            c: itemCode,            
-                            n: itemName,             
-                            q: parseFloat(cols[5]) || 1, // 수량
-                            nb: cols[9] === '비급여' // 비급여 여부
-                        });
+                // [필터 2] 코드가 없거나, 코드가 '증상'/'상병' 같은 텍스트면 스킵
+                if (!currentSetCode || !itemCode) return;
+                if (itemCode === "증상" || itemCode === "상병" || itemCode === "구분") return;
+
+                // [핵심 로직] 증상 vs 처방 분리
+                // 조건: 구분열이 '상병'이거나, 코드 길이가 2자리 이하(예: 10, 20, aa)인 경우
+                if (type === "상병" || itemCode.length <= 2) {
+                    const symptomText = itemName;
+                    // 중복 증상 방지
+                    if (!finalDB.sets[currentSetCode].cc.includes(symptomText)) {
+                        finalDB.sets[currentSetCode].cc.push(symptomText);
                     }
+                } else {
+                    // 나머지는 순수 처방 항목 (3자리 이상 코드)
+                    finalDB.sets[currentSetCode].it.push({
+                        c: itemCode,            
+                        n: itemName,             
+                        q: parseFloat(cols[5]) || 1,
+                        nb: cols[9] === '비급여'
+                    });
                 }
             });
-            log(` - 세트 데이터 분석 완료 (2자리 코드 증상 처리)`);
+            log(` - 세트 데이터 정리 완료 (잡동사니 제거됨)`);
         } else {
-            // 일반 파일 처리 (기존과 동일)
+            // 일반 파일 (기존 유지)
             let idxCode = 0, idxName = 1, idxPrice = 2; 
 
             if (lowerName.includes('약가') || lowerName.includes('drug')) {
