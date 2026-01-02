@@ -2,182 +2,259 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>JINSUL - Database Master Converter</title>
+    <title>JINSUL - Smart Data Converter (Final)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
-        :root { --primary: #1e1e1e; --accent: #007bff; --success: #28a745; }
-        body { font-family: 'Pretendard', sans-serif; background: #f0f2f5; padding: 40px; text-align: center; }
-        .box { background: #fff; width: 650px; border-radius: 20px; padding: 40px; box-shadow: 0 15px 40px rgba(0,0,0,0.1); display: inline-block; border: 1px solid #ddd; }
-        .drop-zone { border: 3px dashed #333; padding: 60px; border-radius: 15px; cursor: pointer; background: #fafafa; transition: 0.3s; margin-bottom: 25px; }
-        .drop-zone.dragover { background: #eef6ff; border-color: var(--accent); }
-        #log { text-align: left; background: #000; color: #00ff41; padding: 18px; border-radius: 12px; font-family: 'Consolas', monospace; font-size: 11px; height: 200px; overflow-y: auto; margin-bottom: 25px; line-height: 1.5; }
-        .btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-        .btn { padding: 18px; border-radius: 10px; font-weight: 800; border: none; cursor: pointer; font-size: 15px; transition: 0.2s; }
-        .dl-btn { background: var(--primary); color: #fff; }
-        .dl-btn:disabled { background: #ccc; cursor: not-allowed; }
-        .clear-btn { background: #dc3545; color: #fff; }
+        :root { --primary: #333; --accent: #d73a49; --bg: #f6f6f7; }
+        body { margin: 0; background-color: var(--bg); color: var(--primary); font-family: 'Pretendard', sans-serif; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        
+        .wm { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; z-index: 0; }
+        .wm img { width: min(760px, 78vw); opacity: .10; filter: grayscale(1) saturate(0) brightness(.65) contrast(1.05); }
+
+        header { width: 100%; text-align: center; margin-bottom: 40px; position: relative; z-index: 2; }
+        .top-logo { width: 170px; filter: grayscale(1) brightness(.45) contrast(1.15); opacity: 0.9; }
+
+        .container { position: relative; z-index: 1; width: 700px; text-align: center; }
+
+        .card { 
+            background: rgba(255, 255, 255, 0.1); 
+            backdrop-filter: blur(8px); 
+            border: 1px solid rgba(0,0,0,0.1); 
+            border-radius: 20px; 
+            padding: 40px; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05); 
+        }
+        
+        .drop-zone { 
+            border: 2px dashed #999; border-radius: 15px; padding: 60px 20px; 
+            background: transparent; 
+            transition: 0.3s; cursor: pointer; color: #555;
+        }
+        .drop-zone.active { border-color: var(--accent); background: rgba(215, 58, 73, 0.05); transform: scale(1.01); }
+        .drop-zone h2 { margin: 0 0 15px 0; font-size: 1.5em; color: #333; font-weight: 800; }
+        .drop-zone p { margin: 5px 0; color: #666; font-size: 0.95em; font-weight: 600; }
+
+        .log-box { 
+            margin-top: 25px; height: 150px; overflow-y: auto; 
+            background: rgba(0, 0, 0, 0.85); color: #00ff00; border-radius: 10px; 
+            padding: 15px; font-family: monospace; font-size: 12px; text-align: left; 
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        .log-line { margin-bottom: 4px; border-bottom: 1px solid #333; padding-bottom: 2px; }
+
+        .btn { 
+            margin-top: 30px; padding: 18px 50px; background: var(--primary); 
+            color: white; border: none; border-radius: 12px; font-size: 16px; font-weight: 900; 
+            cursor: pointer; display: none; box-shadow: 0 5px 15px rgba(0,0,0,0.2); transition: 0.2s; 
+        }
+        .btn:hover { transform: translateY(-2px); background: #000; }
+
+        footer { margin-top: 50px; font-size: 12px; color: #aaa; position: relative; z-index: 2; font-weight: 600; }
     </style>
 </head>
 <body>
 
-    <div class="box">
-        <img src="https://raw.githubusercontent.com/jinsul-lab/openteam/main/jinsul-logo.png" width="160" style="margin-bottom:20px; filter: grayscale(1);">
-        <h2 style="letter-spacing:-1px;">통합 데이터베이스 마스터 컨버터</h2>
-        
+<div class="wm"><img src="https://raw.githubusercontent.com/jinsul-lab/openteam/main/jinsul-logo.png"></div>
+
+<header>
+    <img src="https://raw.githubusercontent.com/jinsul-lab/openteam/main/jinsul-logo.png" class="top-logo">
+</header>
+
+<div class="container">
+    <div class="card">
         <div id="dropZone" class="drop-zone">
-            <div style="font-size:45px;">📥</div>
-            <p>수가, 약가, 재료, 세트 파일을 여기에 던지세요</p>
-            <span style="font-size:12px; color:#999;">누적 방식 | 한글 보정 | 9MB급 초압축 엔진 탑재</span>
+            <h2>📂 파일을 여기에 놓아주세요</h2>
+            <p>수가, 약가, 재료, 세트 파일 (CSV / Excel)</p>
+            <p style="margin-top:15px; color:#d73a49; font-weight:800; font-size:0.85em;">✨ 처방세트 구조 자동 인식 & 한글 복구</p>
         </div>
-        <input type="file" id="fInput" multiple style="display:none" onchange="handleFiles(this.files)">
 
-        <div id="log">분석 대기 중...</div>
-
-        <div class="btn-group">
-            <button id="dlBtn" class="btn dl-btn" onclick="downloadJSON()" disabled>최적화 JSON 다운로드 (0건)</button>
-            <button class="btn clear-btn" onclick="location.reload()">데이터 초기화</button>
+        <div id="logBox" class="log-box">
+            <div class="log-line">> 시스템 준비 완료.</div>
+            <div class="log-line">> 파일을 드래그하여 database.json을 생성하세요.</div>
         </div>
+
+        <button id="dnBtn" class="btn" onclick="downloadJSON()">💾 database.json 저장하기</button>
     </div>
+</div>
+
+<footer>© JINSUL · 경험과 가치를 현실화하는 컨설팅</footer>
 
 <script>
-    // 전역 저장소 (배열 압축 방식)
-    let finalDB = { fee: {}, drug: {}, mat: {}, sets: {} };
-    let totalItems = 0;
+    let finalDB = { fee: {}, drug: {}, mat: {}, sets: {}, dates: { fee: "-", drug: "-", mat: "-" } };
+    const dz = document.getElementById('dropZone');
+    const logBox = document.getElementById('logBox');
 
-    const dropZone = document.getElementById('dropZone');
-    const logEl = document.getElementById('log');
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dz.addEventListener(eventName, preventDefaults, false);
+        document.body.addEventListener(eventName, preventDefaults, false);
+    });
 
-    dropZone.ondragover = (e) => { e.preventDefault(); dropZone.classList.add('dragover'); };
-    dropZone.ondragleave = () => { dropZone.classList.remove('dragover'); };
-    dropZone.ondrop = (e) => { e.preventDefault(); dropZone.classList.remove('dragover'); handleFiles(e.dataTransfer.files); };
-    dropZone.onclick = () => document.getElementById('fInput').click();
+    function preventDefaults(e) { e.preventDefault(); e.stopPropagation(); }
+    dz.addEventListener('dragenter', highlight, false);
+    dz.addEventListener('dragover', highlight, false);
+    dz.addEventListener('dragleave', unhighlight, false);
+    dz.addEventListener('drop', handleDrop, false);
 
-    async function handleFiles(files) {
-        if(totalItems === 0) logEl.innerHTML = '';
-        for(const file of Array.from(files)) {
-            addLog(`▶ [분석 시작] ${file.name}`);
-            await processFile(file);
-        }
-        updateButton();
+    function highlight() { dz.classList.add('active'); }
+    function unhighlight() { dz.classList.remove('active'); }
+
+    function handleDrop(e) {
+        unhighlight();
+        const dt = e.dataTransfer;
+        handleFiles(dt.files);
     }
 
-    function processFile(file) {
+    function log(msg) {
+        const div = document.createElement('div');
+        div.className = 'log-line';
+        div.textContent = "> " + msg;
+        logBox.appendChild(div);
+        logBox.scrollTop = logBox.scrollHeight;
+    }
+
+    async function handleFiles(files) {
+        log(`${files.length}개 파일 감지. 분석 시작...`);
+        
+        for (const file of Array.from(files)) {
+            const name = file.name.toLowerCase();
+            const isSet = name.includes('세트') || name.includes('set');
+            
+            const dateMatch = file.name.match(/\d{6,8}/);
+            const dateStr = dateMatch ? dateMatch[0].replace(/(\d{4})(\d{2})(\d{2})/, '$1-$2-$3') : "-";
+
+            let cat = 'fee';
+            if (name.includes('약가') || name.includes('drug')) cat = 'drug';
+            else if (name.includes('재료') || name.includes('mat')) cat = 'mat';
+            
+            if (!isSet) finalDB.dates[cat] = dateStr;
+
+            try {
+                if (name.endsWith('.csv')) {
+                    await processCSV(file, cat, isSet);
+                } else {
+                    await processExcel(file, cat, isSet);
+                }
+            } catch (e) {
+                log(`❌ [에러] ${file.name}: ${e.message}`);
+            }
+        }
+        
+        document.getElementById('dnBtn').style.display = 'inline-block';
+        log("✅ 모든 변환 완료! 저장 버튼을 누르세요.");
+    }
+
+    function processCSV(file, cat, isSet) {
         return new Promise((resolve) => {
             const reader = new FileReader();
             reader.onload = function(e) {
-                try {
-                    const data = new Uint8Array(e.target.result);
-                    // 한글 깨짐 방지: CP949 인코딩 강제 적용
-                    const wb = XLSX.read(data, {type: 'array', codepage: 949});
-                    const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {header: 1});
-                    
-                    const name = file.name.toLowerCase();
-                    const headerStr = rows.slice(0, 5).map(r => r.join('')).join('');
-
-                    if (headerStr.includes('증상') || headerStr.includes('상병')) {
-                        const count = parseSets(rows);
-                        addLog(`✔ 처방세트 ${count}개 누적 완료`, '#fff');
-                    } else {
-                        let cat = name.includes('약가') ? 'drug' : (name.includes('재료') ? 'mat' : 'fee');
-                        const count = parseItems(rows, cat);
-                        addLog(`✔ ${cat.toUpperCase()} 데이터 ${count.toLocaleString()}건 누적 완료`, '#fff');
-                    }
-                } catch (err) {
-                    addLog(`❌ 오류: ${file.name} 분석 실패`, '#ff5252');
+                const buffer = new Uint8Array(e.target.result);
+                let decoder = new TextDecoder('euc-kr');
+                let text = decoder.decode(buffer);
+                
+                if ((text.match(/\ufffd/g) || []).length > text.length * 0.05) {
+                    decoder = new TextDecoder('utf-8');
+                    text = decoder.decode(buffer);
+                    log(`📄 [CSV] ${file.name} (UTF-8)`);
+                } else {
+                    log(`📄 [CSV] ${file.name} (EUC-KR)`);
                 }
+                
+                parseData(text, cat, isSet, file.name);
                 resolve();
             };
             reader.readAsArrayBuffer(file);
         });
     }
 
-    function parseItems(rows, cat) {
-        let cIdx = 0, nIdx = 2, pIdx = 3; 
-        
-        // 헤더 행을 찾아 실제 인덱스 보정 (의원단가, 상한가 등 대응)
-        const headerRow = rows.find(r => r.some(c => {
-            const s = String(c);
-            return s.includes('코드') || s.includes('수가') || s.includes('품명');
-        }));
-
-        if (headerRow) {
-            cIdx = headerRow.findIndex(v => String(v).includes('코드'));
-            nIdx = headerRow.findIndex(v => String(v).includes('한글명') || String(v).includes('명칭') || String(v).includes('품명'));
-            pIdx = headerRow.findIndex(v => String(v).includes('의원단가') || String(v).includes('단가') || String(v).includes('금액') || String(v).includes('상한가'));
-        }
-
-        let count = 0;
-        rows.forEach(r => {
-            const code = String(r[cIdx] || '').trim().toUpperCase();
-            if (code.length < 4 || code.includes('코드')) return;
-
-            const name = String(r[nIdx] || '').trim().substring(0, 40); // 명칭 최적화
-            const price = parseInt(String(r[pIdx] || '0').replace(/[^0-9]/g, '')) || 0;
-
-            if (price > 0) {
-                // 압축 구조 적용: ["명칭", 단가]
-                finalDB[cat][code] = [name, price];
-                count++;
-            }
+    function processExcel(file, cat, isSet) {
+        return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                const csv = XLSX.utils.sheet_to_csv(firstSheet);
+                log(`📊 [Excel] ${file.name} 로드됨`);
+                parseData(csv, cat, isSet, file.name);
+                resolve();
+            };
+            reader.readAsArrayBuffer(file);
         });
-        totalItems += count;
-        return count;
     }
 
-    function parseSets(rows) {
-        let bundles = {};
-        let cur = null, sec = "";
+    function parseData(text, cat, isSet, fileName) {
+        const rows = text.split('\n');
         let count = 0;
-        rows.forEach(r => {
-            const a = String(r[0]||"").trim();
-            if (a.startsWith('+') || a.startsWith('Z')) {
-                cur = a; bundles[cur] = { n: String(r[1]||a).trim().substring(0,40), cc: [], dg: [], it: [] };
-                sec = ""; count++; return;
-            }
-            if (!cur) return;
-            const rowStr = r.join(" ");
-            if (rowStr.includes("증상")) sec = "CC"; 
-            else if (rowStr.includes("상병")) sec = "DIAG"; 
-            else if (rowStr.includes("처방") || rowStr.includes("ITEM")) sec = "ITEM";
+        const lowerName = fileName.toLowerCase();
 
-            if (sec === "CC" && r[4] && !String(r[4]).includes('PLAN')) bundles[cur].cc.push(r[4]);
-            else if (sec === "DIAG" && r[3]) bundles[cur].dg.push([String(r[3]), String(r[4])]);
-            else if (sec === "ITEM" && r[3]) {
-                const code = String(r[3]).toUpperCase();
-                if(code.length >= 4) {
-                    bundles[cur].it.push({ 
-                        c: code, n: String(r[4]).trim().substring(0,40), 
-                        q: parseFloat(r[5])||1, nb: String(r[9]).includes('비급여') 
+        if (isSet) {
+            // [세트 파일 로직 수정: 묶음코드 기억하기]
+            let currentSetCode = "";
+            let currentSetName = "";
+
+            rows.forEach(row => {
+                const cols = row.split(',').map(c => c.trim().replace(/"/g, ''));
+                if (cols.length < 5) return;
+                if (cols[0] === "묶음코드") return; // 헤더 제외
+
+                // A열(묶음코드)이 있으면 갱신, 없으면 이전 값 유지 (셀 병합 대응)
+                if (cols[0]) {
+                    currentSetCode = cols[0];
+                    currentSetName = cols[1];
+                    if (!finalDB.sets[currentSetCode]) {
+                        finalDB.sets[currentSetCode] = { n: currentSetName, it: [], cc: [] };
+                    }
+                }
+
+                // D열(하위코드, idx 3)이 있어야 항목으로 추가
+                const itemCode = cols[3];
+                if (currentSetCode && itemCode) {
+                    finalDB.sets[currentSetCode].it.push({
+                        c: itemCode,            // D열: 하위코드
+                        n: cols[4],             // E열: 하위코드명칭
+                        q: parseFloat(cols[5]) || 1, // F열: 총투(수량)
+                        nb: cols[9] === '비급여' // J열: 급여구분
                     });
                 }
+            });
+            log(` - 세트 데이터 구조 분석 완료`);
+        } else {
+            // [일반 파일 로직: 컬럼 위치 자동 매핑]
+            let idxCode = 0, idxName = 1, idxPrice = 2; 
+
+            if (lowerName.includes('약가') || lowerName.includes('drug')) {
+                idxCode = 0; idxPrice = 3; idxName = 6;
+            } else if (lowerName.includes('재료') || lowerName.includes('mat')) {
+                idxCode = 0; idxName = 2; idxPrice = 5;
+            } else if (lowerName.includes('수가') || lowerName.includes('fee')) {
+                idxCode = 0; idxName = 2; idxPrice = 3;
             }
-        });
-        finalDB.sets = { ...finalDB.sets, ...bundles };
-        return count;
-    }
 
-    function addLog(msg, color = '#00e676') {
-        const div = document.createElement('div');
-        div.style.color = color;
-        div.style.marginBottom = '5px';
-        div.innerText = msg;
-        logEl.appendChild(div);
-        logEl.scrollTop = logEl.scrollHeight;
-    }
+            rows.forEach(row => {
+                const cols = row.split(',').map(c => c.trim().replace(/"/g, ''));
+                if (cols.length < Math.max(idxCode, idxName, idxPrice)) return;
 
-    function updateButton() {
-        const btn = document.getElementById('dlBtn');
-        const setLen = Object.keys(finalDB.sets).length;
-        btn.disabled = false;
-        btn.innerText = `최적화 JSON 다운로드 (총 ${totalItems.toLocaleString()}건 / 세트 ${setLen}개)`;
+                const code = cols[idxCode] ? cols[idxCode].toUpperCase() : "";
+                const name = cols[idxName] || "";
+                const price = parseFloat((cols[idxPrice] || "0").replace(/,/g, '')) || 0;
+
+                if (code && code.length < 20 && code !== "코드" && code !== "수가코드") {
+                    finalDB[cat][code] = [name, price];
+                    count++;
+                }
+            });
+            log(` - ${count}건 데이터 처리 완료`);
+        }
     }
 
     function downloadJSON() {
-        const blob = new Blob([JSON.stringify(finalDB)], { type: 'application/json' });
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(finalDB));
         const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
+        a.href = dataStr;
         a.download = "database.json";
+        document.body.appendChild(a);
         a.click();
+        a.remove();
     }
 </script>
 </body>
