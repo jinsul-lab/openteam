@@ -2,76 +2,181 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>JINSUL DB Converter (Final Fix)</title>
+    <title>JINSUL - Database Master Converter</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
-        body { font-family: sans-serif; text-align: center; padding: 50px; background: #f4f4f4; }
-        .box { background: white; padding: 30px; border-radius: 15px; display: inline-block; box-shadow: 0 5px 20px rgba(0,0,0,0.1); }
-        input { margin: 10px 0; display: block; width: 100%; }
-        #log { margin-top: 20px; font-size: 12px; color: blue; text-align: left; max-height: 200px; overflow-y: auto; }
+        :root { --primary: #1e1e1e; --accent: #007bff; --success: #28a745; }
+        body { font-family: 'Pretendard', sans-serif; background: #f0f2f5; padding: 40px; text-align: center; }
+        .box { background: #fff; width: 650px; border-radius: 20px; padding: 40px; box-shadow: 0 15px 40px rgba(0,0,0,0.1); display: inline-block; border: 1px solid #ddd; }
+        .drop-zone { border: 3px dashed #333; padding: 60px; border-radius: 15px; cursor: pointer; background: #fafafa; transition: 0.3s; margin-bottom: 25px; }
+        .drop-zone.dragover { background: #eef6ff; border-color: var(--accent); }
+        #log { text-align: left; background: #000; color: #00ff41; padding: 18px; border-radius: 12px; font-family: 'Consolas', monospace; font-size: 11px; height: 200px; overflow-y: auto; margin-bottom: 25px; line-height: 1.5; }
+        .btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .btn { padding: 18px; border-radius: 10px; font-weight: 800; border: none; cursor: pointer; font-size: 15px; transition: 0.2s; }
+        .dl-btn { background: var(--primary); color: #fff; }
+        .dl-btn:disabled { background: #ccc; cursor: not-allowed; }
+        .clear-btn { background: #dc3545; color: #fff; }
     </style>
 </head>
 <body>
+
     <div class="box">
-        <h2>JINSUL 데이터 변환기 (최종)</h2>
-        <p style="font-size:12px; color:red;">파일을 하나씩 선택하면 즉시 분석합니다.</p>
-        <input type="file" accept=".xlsx,.xlsb,.csv" onchange="processFile(this)">
-        <button id="dlBtn" onclick="downloadJSON()" style="padding:15px 30px; background:#333; color:#fff; border:none; border-radius:8px; cursor:pointer; font-weight:bold;" disabled>JSON 다운로드 (0건)</button>
-        <div id="log"></div>
+        <img src="https://raw.githubusercontent.com/jinsul-lab/openteam/main/jinsul-logo.png" width="160" style="margin-bottom:20px; filter: grayscale(1);">
+        <h2 style="letter-spacing:-1px;">통합 데이터베이스 마스터 컨버터</h2>
+        
+        <div id="dropZone" class="drop-zone">
+            <div style="font-size:45px;">📥</div>
+            <p>수가, 약가, 재료, 세트 파일을 여기에 던지세요</p>
+            <span style="font-size:12px; color:#999;">누적 방식 | 한글 보정 | 9MB급 초압축 엔진 탑재</span>
+        </div>
+        <input type="file" id="fInput" multiple style="display:none" onchange="handleFiles(this.files)">
+
+        <div id="log">분석 대기 중...</div>
+
+        <div class="btn-group">
+            <button id="dlBtn" class="btn dl-btn" onclick="downloadJSON()" disabled>최적화 JSON 다운로드 (0건)</button>
+            <button class="btn clear-btn" onclick="location.reload()">데이터 초기화</button>
+        </div>
     </div>
 
 <script>
+    // 전역 저장소 (배열 압축 방식)
     let finalDB = { fee: {}, drug: {}, mat: {}, sets: {} };
-    let totalCount = 0;
+    let totalItems = 0;
 
-    function processFile(input) {
-        const file = input.files[0];
-        if(!file) return;
+    const dropZone = document.getElementById('dropZone');
+    const logEl = document.getElementById('log');
+
+    dropZone.ondragover = (e) => { e.preventDefault(); dropZone.classList.add('dragover'); };
+    dropZone.ondragleave = () => { dropZone.classList.remove('dragover'); };
+    dropZone.ondrop = (e) => { e.preventDefault(); dropZone.classList.remove('dragover'); handleFiles(e.dataTransfer.files); };
+    dropZone.onclick = () => document.getElementById('fInput').click();
+
+    async function handleFiles(files) {
+        if(totalItems === 0) logEl.innerHTML = '';
+        for(const file of Array.from(files)) {
+            addLog(`▶ [분석 시작] ${file.name}`);
+            await processFile(file);
+        }
+        updateButton();
+    }
+
+    function processFile(file) {
+        return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    // 한글 깨짐 방지: CP949 인코딩 강제 적용
+                    const wb = XLSX.read(data, {type: 'array', codepage: 949});
+                    const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {header: 1});
+                    
+                    const name = file.name.toLowerCase();
+                    const headerStr = rows.slice(0, 5).map(r => r.join('')).join('');
+
+                    if (headerStr.includes('증상') || headerStr.includes('상병')) {
+                        const count = parseSets(rows);
+                        addLog(`✔ 처방세트 ${count}개 누적 완료`, '#fff');
+                    } else {
+                        let cat = name.includes('약가') ? 'drug' : (name.includes('재료') ? 'mat' : 'fee');
+                        const count = parseItems(rows, cat);
+                        addLog(`✔ ${cat.toUpperCase()} 데이터 ${count.toLocaleString()}건 누적 완료`, '#fff');
+                    }
+                } catch (err) {
+                    addLog(`❌ 오류: ${file.name} 분석 실패`, '#ff5252');
+                }
+                resolve();
+            };
+            reader.readAsArrayBuffer(file);
+        });
+    }
+
+    function parseItems(rows, cat) {
+        let cIdx = 0, nIdx = 2, pIdx = 3; 
         
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const data = new Uint8Array(e.target.result);
-            const wb = XLSX.read(data, {type: 'array'});
-            const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {header: 1});
-            
-            // 헤더 위치 찾기
-            let cIdx = -1, nIdx = -1, pIdx = -1;
-            const headerRow = rows.find(r => r.some(c => String(c).includes('수가') || String(c).includes('코드')));
-            
-            if (headerRow) {
-                cIdx = headerRow.findIndex(v => String(v).includes('코드'));
-                nIdx = headerRow.findIndex(v => String(v).includes('한글명') || String(v).includes('명칭'));
-                pIdx = headerRow.findIndex(v => String(v).includes('의원단가') || String(v).includes('단가') || String(v).includes('금액'));
-            } else {
-                // 헤더 못찾으면 강제 지정 (A, C, D열)
-                cIdx = 0; nIdx = 2; pIdx = 3;
-            }
+        // 헤더 행을 찾아 실제 인덱스 보정 (의원단가, 상한가 등 대응)
+        const headerRow = rows.find(r => r.some(c => {
+            const s = String(c);
+            return s.includes('코드') || s.includes('수가') || s.includes('품명');
+        }));
 
-            let count = 0;
-            rows.forEach((r, i) => {
-                const code = String(r[cIdx] || '').trim().toUpperCase();
-                if (code.length < 4 || code === '수가코드') return;
-                
-                const name = String(r[nIdx] || '').trim();
-                const price = parseInt(String(r[pIdx] || '0').replace(/[^0-9]/g, '')) || 0;
-                
-                finalDB.fee[code] = { n: name, p: price };
+        if (headerRow) {
+            cIdx = headerRow.findIndex(v => String(v).includes('코드'));
+            nIdx = headerRow.findIndex(v => String(v).includes('한글명') || String(v).includes('명칭') || String(v).includes('품명'));
+            pIdx = headerRow.findIndex(v => String(v).includes('의원단가') || String(v).includes('단가') || String(v).includes('금액') || String(v).includes('상한가'));
+        }
+
+        let count = 0;
+        rows.forEach(r => {
+            const code = String(r[cIdx] || '').trim().toUpperCase();
+            if (code.length < 4 || code.includes('코드')) return;
+
+            const name = String(r[nIdx] || '').trim().substring(0, 40); // 명칭 최적화
+            const price = parseInt(String(r[pIdx] || '0').replace(/[^0-9]/g, '')) || 0;
+
+            if (price > 0) {
+                // 압축 구조 적용: ["명칭", 단가]
+                finalDB[cat][code] = [name, price];
                 count++;
-            });
+            }
+        });
+        totalItems += count;
+        return count;
+    }
 
-            totalCount += count;
-            document.getElementById('log').innerHTML += `<div>✔ ${file.name}: ${count}건 분석 완료</div>`;
-            const btn = document.getElementById('dlBtn');
-            btn.disabled = false;
-            btn.innerText = `JSON 다운로드 (총 ${totalCount}건)`;
-        };
-        reader.readAsArrayBuffer(file);
+    function parseSets(rows) {
+        let bundles = {};
+        let cur = null, sec = "";
+        let count = 0;
+        rows.forEach(r => {
+            const a = String(r[0]||"").trim();
+            if (a.startsWith('+') || a.startsWith('Z')) {
+                cur = a; bundles[cur] = { n: String(r[1]||a).trim().substring(0,40), cc: [], dg: [], it: [] };
+                sec = ""; count++; return;
+            }
+            if (!cur) return;
+            const rowStr = r.join(" ");
+            if (rowStr.includes("증상")) sec = "CC"; 
+            else if (rowStr.includes("상병")) sec = "DIAG"; 
+            else if (rowStr.includes("처방") || rowStr.includes("ITEM")) sec = "ITEM";
+
+            if (sec === "CC" && r[4] && !String(r[4]).includes('PLAN')) bundles[cur].cc.push(r[4]);
+            else if (sec === "DIAG" && r[3]) bundles[cur].dg.push([String(r[3]), String(r[4])]);
+            else if (sec === "ITEM" && r[3]) {
+                const code = String(r[3]).toUpperCase();
+                if(code.length >= 4) {
+                    bundles[cur].it.push({ 
+                        c: code, n: String(r[4]).trim().substring(0,40), 
+                        q: parseFloat(r[5])||1, nb: String(r[9]).includes('비급여') 
+                    });
+                }
+            }
+        });
+        finalDB.sets = { ...finalDB.sets, ...bundles };
+        return count;
+    }
+
+    function addLog(msg, color = '#00e676') {
+        const div = document.createElement('div');
+        div.style.color = color;
+        div.style.marginBottom = '5px';
+        div.innerText = msg;
+        logEl.appendChild(div);
+        logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    function updateButton() {
+        const btn = document.getElementById('dlBtn');
+        const setLen = Object.keys(finalDB.sets).length;
+        btn.disabled = false;
+        btn.innerText = `최적화 JSON 다운로드 (총 ${totalItems.toLocaleString()}건 / 세트 ${setLen}개)`;
     }
 
     function downloadJSON() {
-        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(finalDB));
+        const blob = new Blob([JSON.stringify(finalDB)], { type: 'application/json' });
         const a = document.createElement('a');
-        a.href = dataStr; a.download = "database.json";
+        a.href = URL.createObjectURL(blob);
+        a.download = "database.json";
         a.click();
     }
 </script>
