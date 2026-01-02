@@ -4,63 +4,74 @@
     <meta charset="UTF-8">
     <title>JINSUL - Case Verification System</title>
     <style>
-        :root { --primary-grey: #333; --accent-red: #d73a49; --border: rgba(0, 0, 0, 0.1); --blue: #0052cc; }
-        body { margin: 0; background-color: #f6f6f7; color: #333; font-family: 'Pretendard', sans-serif; min-height: 100vh; display: flex; flex-direction: column; align-items: center; overflow-x: hidden; }
+        :root { --primary: #333; --accent: #d73a49; --border: #eee; --blue: #0052cc; --bg: #f6f6f7; }
+        body { margin: 0; background-color: var(--bg); color: var(--primary); font-family: 'Pretendard', sans-serif; min-height: 100vh; display: flex; flex-direction: column; align-items: center; overflow-x: hidden; }
         
-        /* [디자인] JINSUL 오리지널 워터마크 */
         .wm { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; z-index: 0; }
-        .wm img { width: min(760px, 78vw); opacity: .10; user-select: none; filter: grayscale(1) saturate(0) brightness(.65) contrast(1.05); }
-
-        header { width: 100%; padding: 30px 0; text-align: center; position: relative; z-index: 1; }
-        .top-logo { width: 170px; height: auto; display: block; margin: 0 auto 10px; filter: grayscale(1) saturate(0) brightness(.45) contrast(1.15); opacity: 0.8; }
+        .wm img { width: min(760px, 78vw); opacity: .10; filter: grayscale(1) saturate(0) brightness(.65) contrast(1.05); }
+        header { width: 100%; padding: 25px 0; text-align: center; position: relative; z-index: 1; }
+        .top-logo { width: 170px; filter: grayscale(1) brightness(.45) contrast(1.15); opacity: 0.8; }
         
-        #syncBoard { position: absolute; top: 10px; right: 20px; background: #fff; border: 1px solid #222; border-radius: 10px; padding: 12px 18px; font-size: 11px; z-index: 1000; box-shadow: 0 6px 20px rgba(0,0,0,0.05); width: 300px; }
-        .sync-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+        #syncBoard { position: absolute; top: 10px; right: 20px; background: #fff; border: 1px solid #222; border-radius: 8px; padding: 12px 18px; font-size: 12px; z-index: 1000; box-shadow: 0 4px 15px rgba(0,0,0,0.05); width: 240px; }
+        .sync-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+        .sync-row:last-child { margin-bottom: 0; }
+        .sync-label { color: #555; font-weight: 700; }
+        .sync-val { font-weight: 800; color: #333; }
 
-        .container { width: 1550px; max-width: 98%; margin: 0 auto; display: grid; grid-template-columns: 1.8fr 1.2fr; gap: 40px; padding-bottom: 100px; position: relative; z-index: 1; flex: 1; }
-        .card { background: rgba(255, 255, 255, 0.75); border: 1px solid var(--border); border-radius: 12px; padding: 35px; backdrop-filter: blur(1px); margin-bottom: 30px; }
+        .container { width: 1550px; max-width: 98%; margin: 0 auto; display: grid; grid-template-columns: 1.75fr 1.25fr; gap: 25px; padding-bottom: 80px; position: relative; z-index: 1; flex: 1; }
+        .card { background: rgba(255, 255, 255, 0.85); border: 1px solid rgba(0,0,0,0.08); border-radius: 12px; padding: 25px; backdrop-filter: blur(5px); margin-bottom: 20px; box-shadow: 0 5px 20px rgba(0,0,0,0.02); }
+        .section-title { font-size: 0.95em; font-weight: 800; color: #777; margin: 0 0 12px 0; border-left: 4px solid var(--primary); padding-left: 10px; }
         
-        .section-title { font-size: 0.85em; font-weight: 800; color: #999; margin: 30px 0 15px 0; border-left: 3px solid #333; padding-left: 12px; text-transform: uppercase; }
+        .consult-group { display: flex; gap: 8px; margin-bottom: 20px; }
+        .c-btn { flex: 1; padding: 12px; border: 1px solid #ddd; border-radius: 8px; background: #fff; cursor: pointer; font-weight: 800; font-size: 13px; color: #666; transition: 0.2s; }
+        .c-btn.active { border-color: var(--primary); background: var(--primary); color: #fff; }
+
+        table { width: 100%; border-collapse: separate; border-spacing: 0 4px; }
+        th { padding: 8px 10px; text-align: left; font-size: 0.8em; color: #999; text-transform: uppercase; }
+        td { padding: 8px 10px; background: rgba(243, 244, 246, 0.4); font-size: 0.95em; font-weight: 600; border: 1px solid #f5f5f5; }
+        td:first-child { border-radius: 6px 0 0 6px; }
+        td:last-child { border-radius: 0 6px 6px 0; }
         
-        table { width: 100%; border-collapse: collapse; }
-        th { border-bottom: 2px solid #eee; padding: 12px 10px; text-align: left; font-size: 0.8em; color: #aaa; background: rgba(243, 244, 246, 0.5); }
-        td { padding: 10px 10px; border-bottom: 1px solid #eee; font-size: 0.95em; font-weight: 600; }
+        .box-input { border: 1px solid #ddd; background: #fff; padding: 6px; border-radius: 4px; font-weight: 800; font-family: inherit; outline: none; font-size: 13px; }
+        .p-input { width: 90px; text-align: right; color: #333; }
+        .q-input { width: 60px; text-align: center; color: var(--accent); }
+
+        /* 상병 테이블 스타일 */
+        .diag-table { width: 100%; margin-bottom: 30px; }
+        .diag-table td { background: #f0f7ff; border-color: #e0e7ff; color: #333; font-weight: 700; }
+        .diag-code { color: var(--blue); font-weight: 900; }
+
+        .summary-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px dashed #eee; }
+        .summary-label { font-size: 13px; font-weight: 700; color: #888; }
+        .summary-val { font-size: 16px; font-weight: 900; color: #333; }
         
-        .box-input { border: 1px solid #ddd; background: #fff; padding: 8px; border-radius: 4px; font-weight: 800; font-family: inherit; outline: none; }
-        .p-input { width: 100px; text-align: right; color: #333; }
-        .q-input { width: 70px; text-align: center; color: var(--accent-red); }
+        .target-input { font-size: 2.2em; width: 180px; background: none; border: none; border-bottom: 3px solid var(--primary); color: var(--primary); text-align: right; font-weight: 900; outline: none; }
+        #finalPay { font-size: 3.2em; font-weight: 900; color: var(--accent); letter-spacing: -2px; line-height: 1; }
 
-        #searchLayer { position: absolute; background: #fff; border: 2px solid #333; border-radius: 10px; width: 100%; max-height: 400px; overflow-y: auto; display: none; z-index: 2000; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
-        .search-item { padding: 12px 15px; border-bottom: 1px solid #eee; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
-        .search-item:hover { background: #f0f7ff; }
-
-        /* 우측 정산 & 비교 보드 */
-        .summary-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px dashed #eee; }
-        .target-input { font-size: 2.2em; width: 160px; background: none; border: none; border-bottom: 3px solid #333; color: #333; text-align: right; font-weight: 900; outline: none; }
-        #finalPay { font-size: 3.5em; font-weight: 900; color: var(--accent-red); letter-spacing: -2px; }
-
-        /* 멀티 타겟 요약 표 */
-        .matrix-table { width: 100%; font-size: 12px; margin-top: 20px; border-top: 1px solid #eee; }
-        .matrix-row { display: flex; justify-content: space-between; padding: 10px 5px; border-bottom: 1px solid #f9f9f9; }
+        .matrix-container { display: grid; grid-template-columns: repeat(1, 1fr); gap: 6px; margin-top: 15px; }
+        .matrix-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; background: #fff; border: 1px solid #eee; border-radius: 8px; font-size: 12px; cursor: pointer; transition: 0.2s; }
+        .matrix-row:hover { background: #f0f7ff; border-color: var(--blue); transform: translateY(-1px); box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .matrix-target { font-weight: 800; color: #555; }
-        .matrix-val { font-weight: 900; color: var(--blue); }
+        .matrix-val { font-weight: 900; color: var(--blue); font-size: 13px; }
 
-        .lock-btn, .carry-btn { background: none; border: none; font-size: 1.2em; cursor: pointer; opacity: 0.2; transition: 0.2s; }
-        .lock-btn.active { opacity: 1; color: var(--accent-red); }
+        .lock-btn, .carry-btn { background: none; border: none; font-size: 1.1em; cursor: pointer; opacity: 0.3; transition: 0.2s; }
+        .lock-btn.active { opacity: 1; color: var(--accent); }
         .carry-btn.active { opacity: 1; color: var(--blue); }
 
-        footer { width: 100%; text-align: center; padding: 60px 0; font-size: 12px; color: #aaa; background: transparent; }
-        .c-btn { flex: 1; padding: 14px; border: 1px solid #ddd; border-radius: 8px; background: rgba(255,255,255,0.6); cursor: pointer; font-weight: 800; font-size: 13px; color: #666; }
-        .c-btn.active { border-color: var(--primary-grey); background: var(--primary-grey); color: #fff; }
+        #searchLayer { position: absolute; width: 100%; top: 55px; background: #fff; z-index: 100; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); display:none; max-height: 300px; overflow-y: auto; border: 1px solid #ddd; }
+        .search-item { padding: 10px 12px; border-bottom: 1px solid #eee; cursor: pointer; display: flex; justify-content: space-between; font-size: 12px; }
+        .search-item:hover { background: #f5f5f5; }
+
+        footer { width: 100%; text-align: center; padding: 50px 0; font-size: 12px; color: #aaa; background: transparent; }
     </style>
 </head>
-<body>
+<body onclick="closeSearch(event)">
 
-<div class="wm" aria-hidden="true"><img src="https://raw.githubusercontent.com/jinsul-lab/openteam/main/jinsul-logo.png"></div>
+<div class="wm"><img src="https://raw.githubusercontent.com/jinsul-lab/openteam/main/jinsul-logo.png"></div>
 
 <div id="syncBoard">
-    <div class="sync-row"><span>수가 적용일자</span><span class="sync-val">2026-01-01</span></div>
-    <div class="sync-row"><span>데이터 누적수</span><span id="st-db" class="sync-val">...</span></div>
+    <div class="sync-row"><span class="sync-label">수가 적용일자</span><span id="st-date" class="sync-val">-</span></div>
+    <div class="sync-row"><span class="sync-label">데이터 누적수</span><span id="st-db" class="sync-val">...</span></div>
 </div>
 
 <header><img src="https://raw.githubusercontent.com/jinsul-lab/openteam/main/jinsul-logo.png" class="top-logo"></header>
@@ -68,21 +79,31 @@
 <div class="container">
     <div class="main-column">
         <div class="card">
-            <div class="section-title">Consultation Fee</div>
-            <div class="consult-group" style="display:flex; gap:10px; margin-bottom:25px;">
+            <div class="section-title">진찰료 산정</div>
+            <div class="consult-group">
                 <button onclick="setConsult('first')" id="btn-first" class="c-btn">초진</button>
                 <button onclick="setConsult('follow')" id="btn-follow" class="c-btn">재진</button>
-                <button onclick="setConsult('none')" id="btn-none" class="c-btn active">안함</button>
+                <button onclick="setConsult('none')" id="btn-none" class="c-btn active">산정 안함</button>
             </div>
 
-            <div class="section-title">Set Selection</div>
-            <select id="setSel" style="width:100%; font-weight:700; font-size:1.1em; border:2px solid #333; border-radius:8px; padding:12px; outline:none; background:#fff;" onchange="changeSet()"></select>
+            <div class="section-title">코드 선택</div>
+            <select id="setSel" style="width:100%; font-weight:800; font-size:1.1em; border:2px solid var(--primary); border-radius:8px; padding:12px; outline:none; background:#fff; cursor:pointer;" onchange="changeSet()"></select>
             
-            <div id="dataView" style="display:none; margin-top:35px;">
-                <div class="section-title">Chief Complaint</div>
-                <div id="ccContent" style="padding:25px; background:rgba(0,0,0,0.02); border-radius:12px; font-size:1em; line-height:1.8; margin-bottom:30px;"></div>
+            <div id="dataView" style="display:none; margin-top:30px;">
+                <div id="totalAuditBox" style="padding:10px; background:#fff0f1; border:1px solid var(--accent); border-radius:6px; color:var(--accent); font-weight:800; font-size:12px; margin-bottom:15px; display:none;">⚠️ 차단술 총 합계가 3.0을 초과했습니다.</div>
+
+                <div class="section-title">환자 증상 (C.C)</div>
+                <div id="ccContent" style="padding:15px; background:rgba(0,0,0,0.03); border-radius:8px; font-size:0.95em; line-height:1.6; margin-bottom:30px; border-left: 4px solid #ddd; min-height:20px;"></div>
+
+                <div id="diagSection" style="display:none;">
+                    <div class="section-title" style="border-left-color: var(--blue); color:var(--blue);">상병 내역 (Diagnosis)</div>
+                    <table class="diag-table">
+                        <thead><tr><th style="width:20%">상병코드</th><th>상병명칭</th></tr></thead>
+                        <tbody id="diagList"></tbody>
+                    </table>
+                </div>
                 
-                <div class="section-title">Prescription / Auto-Balance</div>
+                <div class="section-title">처방 내역 / 비급여 조정</div>
                 <table>
                     <thead>
                         <tr><th style="width:15%">코드</th><th>품명 및 규격</th><th style="width:18%; text-align:right;">단가</th><th style="width:12%; text-align:center;">수량</th><th style="width:8%; text-align:center;">잠금</th><th style="width:8%; text-align:center;">유지</th></tr>
@@ -90,38 +111,40 @@
                     <tbody id="itemList"></tbody>
                 </table>
 
-                <div style="margin-top:20px; display:flex; gap:10px; position:relative;">
-                    <input type="text" id="searchInput" placeholder="추가 처방 검색 (명칭 또는 코드)" 
-                           style="flex:1; padding:15px; border-radius:10px; border:2px solid #ddd; font-weight:800; outline:none;"
-                           oninput="searchLive(this.value)">
-                    <button onclick="addManualItem()" style="padding:0 20px; background:#fff; border:2px solid #333; border-radius:10px; font-weight:800; cursor:pointer;">+ 임의 추가</button>
+                <div style="margin-top:20px; display:flex; gap:10px; position:relative;" id="searchBox">
+                    <input type="text" id="searchInput" placeholder="명칭 또는 코드로 처방 검색" 
+                           style="flex:1; padding:12px; border-radius:8px; border:2px solid #ddd; font-weight:800; outline:none; font-size: 13px;"
+                           oninput="searchLive(this.value)" onkeydown="if(event.key==='Escape') clearSearch()">
+                    <button onclick="addManualItem()" style="padding:0 20px; background:#fff; border:2px solid var(--primary); border-radius:8px; font-weight:800; cursor:pointer; font-size:12px;">+ 임의 추가</button>
                     <div id="searchLayer"></div>
                 </div>
 
-                <button onclick="autoBalance()" style="background:#333; color:white; width:100%; padding:20px; border:none; border-radius:10px; font-weight:900; margin-top:30px; cursor:pointer;">강제 역산 실행</button>
+                <button onclick="autoBalance()" style="background:var(--primary); color:white; width:100%; padding:18px; border:none; border-radius:10px; font-weight:900; margin-top:30px; cursor:pointer; font-size:1.05em; letter-spacing: 1px;">강제 역산 실행 (Auto-Balance)</button>
             </div>
         </div>
     </div>
 
     <div class="side-column">
-        <div class="card" style="background: rgba(0,0,0,0.02); text-align: center; padding: 40px;">
-            <div style="font-size: 0.85em; color: #888; margin-bottom: 12px; font-weight: 600;">TARGET (목표가)</div>
-            <input type="number" id="tAmt" class="target-input" value="89000" oninput="autoBalance()">
+        <div class="card" style="background: rgba(0,0,0,0.02); text-align: center; padding: 30px 20px;">
+            <div style="font-size: 0.85em; color: #888; margin-bottom: 10px; font-weight: 800; letter-spacing: 1px;">목표가</div>
+            <div>
+                <input type="number" id="tAmt" class="target-input" value="89000" oninput="autoBalance()"> <span style="font-size: 1.2em; font-weight: 900;">원</span>
+            </div>
         </div>
 
-        <div class="card" style="border-top: 6px solid #333;">
-            <div class="summary-row"><span style="font-size:13px; font-weight:700; color:#888;">총 진료비 합계</span><span id="totalFull" style="font-weight:800;">0</span></div>
-            <div class="summary-row"><span style="font-size:13px; font-weight:700; color:#888;">급여 (본인부담 30%)</span><span id="summaryBenefit" style="font-weight:800;">0</span></div>
-            <div class="summary-row"><span style="font-size:13px; font-weight:700; color:#888;">비급여 (100% 전액)</span><span id="summaryNonBenefit" style="font-weight:800;">0</span></div>
-            <div style="text-align: center; margin-top: 25px;">
-                <div style="font-size: 11px; color: #888; font-weight: 800; margin-bottom: 5px;">최종 수납 금액</div>
+        <div class="card" style="border-top: 6px solid var(--primary);">
+            <div class="summary-row"><span class="summary-label">총 진료비 합계</span><span id="totalFull" class="summary-val">0</span></div>
+            <div class="summary-row"><span class="summary-label">급여 (본인부담 30%)</span><span id="summaryBenefit" class="summary-val">0</span></div>
+            <div class="summary-row" style="border-bottom:none;"><span class="summary-label">비급여 (100% 전액)</span><span id="summaryNonBenefit" class="summary-val" style="color:var(--blue);">0</span></div>
+            
+            <div style="text-align: center; margin-top: 25px; padding-top: 20px; border-top: 2px solid #f0f0f0;">
+                <div style="font-size: 12px; color: #999; font-weight: 800; margin-bottom: 8px;">최종 실제 수납액</div>
                 <div id="finalPay">0</div>
             </div>
 
-            <div class="section-title" style="margin-top:40px; border-left-color: var(--blue);">Adjustment Matrix</div>
-            <div id="matrixAdjustName" style="font-size:11px; color:var(--blue); font-weight:800; margin-bottom:10px; text-align:right;">[조정 항목 없음]</div>
-            <div class="matrix-table" id="matrixTable">
-                </div>
+            <div class="section-title" style="margin-top:40px; border-left-color: var(--blue);">금액별 조정 (Matrix)</div>
+            <div id="matrixAdjustName" style="font-size:11px; color:var(--blue); font-weight:800; margin-bottom:10px; text-align:right;">-</div>
+            <div id="matrixTable" class="matrix-container"></div>
         </div>
     </div>
 </div>
@@ -129,14 +152,12 @@
 <footer>© JINSUL · 경험과 가치를 현실화하는 컨설팅</footer>
 
 <script>
-    let DB = { fee: {}, drug: {}, mat: {}, sets: {} };
+    let DB = { fee: {}, drug: {}, mat: {}, sets: {}, dates: { fee: "-", drug: "-", mat: "-" } };
     let flatDB = [];
     let carryOverItems = new Map();
     let currentCustomItems = []; 
-    
     const STRATEGY_DRUGS = ["비엠히루니다제", "말린다주", "리포라제주"];
-    const CONSULT_DATA = { first: ["진찰료(초진)", 17610], follow: ["진찰료(재진)", 12590], none: ["없음", 0] };
-    const TARGET_PRESETS = [59000, 69000, 79000, 89000, 99000];
+    let CONSULT_PRICES = { first: 0, follow: 0 };
     let currentConsult = "none";
 
     const fmt = n => Math.floor(n || 0).toLocaleString();
@@ -146,52 +167,35 @@
         try {
             const res = await fetch("https://raw.githubusercontent.com/jinsul-lab/openteam/main/database.json?t=" + Date.now());
             DB = await res.json();
+            
+            let displayDate = "2026-01-01";
+            if (DB.dates && DB.dates.fee && DB.dates.fee !== "-") displayDate = DB.dates.fee;
+            document.getElementById('st-date').innerText = displayDate;
+
+            const feeFirst = getFeePrice('AA154') || 17610;
+            const feeFollow = getFeePrice('AA254') || 12590;
+            CONSULT_PRICES = { first: feeFirst, follow: feeFollow };
+            document.getElementById('btn-first').innerText = `초진 (${fmt(feeFirst)})`;
+            document.getElementById('btn-follow').innerText = `재진 (${fmt(feeFollow)})`;
+
             for(let cat in DB) {
-                if(cat === 'sets') continue;
+                if(['sets', 'dates'].includes(cat)) continue;
                 for(let code in DB[cat]) flatDB.push({ code, name: DB[cat][code][0], price: DB[cat][code][1] });
             }
             document.getElementById('st-db').innerText = fmt(flatDB.length) + "건";
-            document.getElementById('setSel').innerHTML = '<option value="">-- 처방 세트를 선택하세요 --</option>' + 
+            document.getElementById('setSel').innerHTML = '<option value="">-- 처방 코드를 선택하세요 --</option>' + 
                 Object.keys(DB.sets).sort().map(k => `<option value="${k}">[${k}] ${DB.sets[k].n}</option>`).join('');
         } catch(e) { console.error("DB 로드 실패"); }
     }
 
-    function changeSet() {
-        currentCustomItems = [];
-        renderItems();
+    function getFeePrice(code) {
+        if(DB.fee && DB.fee[code]) return DB.fee[code][1];
+        if(DB.fee) { const key = Object.keys(DB.fee).find(k => k.startsWith(code)); if(key) return DB.fee[key][1]; }
+        return 0;
     }
 
-    function searchLive(val) {
-        const layer = document.getElementById('searchLayer');
-        if(!val || val.length < 2) { layer.style.display = 'none'; return; }
-        const filtered = flatDB.filter(i => i.code.includes(val.toUpperCase()) || i.name.includes(val)).slice(0, 50);
-        if(filtered.length > 0) {
-            layer.innerHTML = filtered.map(i => `
-                <div class="search-item" onclick="addSearchedItem('${i.code}', '${i.name.replace(/'/g, "\\'")}', ${i.price})">
-                    <span style="color:#0052cc; font-weight:800;">${i.code}</span>
-                    <span style="margin:0 15px; flex:1; font-size:14px; overflow:hidden;">${i.name}</span>
-                    <span style="font-weight:800;">${fmt(i.price)}원</span>
-                </div>
-            `).join('');
-            layer.style.display = 'block';
-        } else { layer.style.display = 'none'; }
-    }
-
-    function addSearchedItem(code, name, price) {
-        let finalPrice = price;
-        if (STRATEGY_DRUGS.some(sd => name.includes(sd))) finalPrice = 100000;
-        currentCustomItems.push({ code, name, price: finalPrice, q: 1, nb: true, lock: false, isManual: false });
-        document.getElementById('searchLayer').style.display = 'none';
-        document.getElementById('searchInput').value = '';
-        renderItems();
-    }
-
-    // ★ 임의 항목 수동 추가 함수
-    function addManualItem() {
-        currentCustomItems.push({ code: "ETC", name: "임의 항목", price: 0, q: 1, nb: true, lock: false, isManual: true });
-        renderItems();
-    }
-
+    function setTarget(val) { document.getElementById('tAmt').value = val; autoBalance(); }
+    function changeSet() { currentCustomItems = []; renderItems(); }
     function setConsult(type) {
         currentConsult = type;
         document.querySelectorAll('.c-btn').forEach(b => b.classList.remove('active'));
@@ -199,17 +203,61 @@
         renderItems();
     }
 
+    function searchLive(val) {
+        const layer = document.getElementById('searchLayer');
+        if(!val || val.length < 2) { layer.style.display = 'none'; return; }
+        const filtered = flatDB.filter(i => i.code.includes(val.toUpperCase()) || i.name.includes(val)).slice(0, 50);
+        layer.innerHTML = filtered.map(i => `
+            <div class="search-item" onclick="addSearchedItem('${i.code}', '${i.name.replace(/'/g, "\\'")}', ${i.price})">
+                <span style="color:#0052cc; font-weight:800;">${i.code}</span>
+                <span style="margin:0 10px; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${i.name}</span>
+                <span style="font-weight:800;">${fmt(i.price)}원</span>
+            </div>`).join('');
+        layer.style.display = filtered.length ? 'block' : 'none';
+    }
+
+    function clearSearch() { document.getElementById('searchLayer').style.display = 'none'; document.getElementById('searchInput').value = ''; }
+    function closeSearch(e) { if (!document.getElementById('searchBox').contains(e.target)) clearSearch(); }
+    function addSearchedItem(code, name, price) {
+        let finalPrice = price; if (STRATEGY_DRUGS.some(sd => name.includes(sd))) finalPrice = 100000;
+        currentCustomItems.push({ code, name, price: finalPrice, q: 1, nb: true, lock: false, isManual: false });
+        clearSearch(); renderItems();
+    }
+    function addManualItem() { currentCustomItems.push({ code: "ETC", name: "임의 항목", price: 0, q: 1, nb: true, lock: false, isManual: true }); renderItems(); }
+
     function renderItems() {
         const key = document.getElementById('setSel').value;
         if(!key) return;
         const set = DB.sets[key];
         document.getElementById('dataView').style.display = 'block';
-        document.getElementById('ccContent').innerHTML = (set.cc||[]).join('<br>');
+        
+        // 1. 증상 (C.C)
+        document.getElementById('ccContent').innerHTML = (set.cc && set.cc.length > 0) ? set.cc.join('<br>') : "등록된 증상 없음";
+        
+        // 2. 상병 (Diagnosis)
+        const diagList = set.dg || [];
+        const diagSection = document.getElementById('diagSection');
+        const diagTbody = document.getElementById('diagList');
+        diagTbody.innerHTML = '';
+        
+        if (diagList.length > 0) {
+            diagSection.style.display = 'block';
+            diagList.forEach(d => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td class="diag-code">${d.c}</td><td>${d.n}</td>`;
+                diagTbody.appendChild(tr);
+            });
+        } else {
+            diagSection.style.display = 'none';
+        }
+
+        // 3. 처방 (Items)
         const tbody = document.getElementById('itemList');
         tbody.innerHTML = '';
         
         if(currentConsult !== "none") {
-            const [name, price] = CONSULT_DATA[currentConsult];
+            const price = CONSULT_PRICES[currentConsult];
+            const name = currentConsult === 'first' ? "진찰료(초진)" : "진찰료(재진)";
             addRow(tbody, "CONST", name, price, 1, false, true, false);
         }
 
@@ -243,9 +291,13 @@
     function addRow(target, code, name, price, qty, isNB, isLocked, isCarry, isCustom = false, customIdx = null) {
         const tr = document.createElement('tr');
         tr.dataset.type = isNB ? 'nb' : 'b';
+        tr.dataset.code = code;
         tr.innerHTML = `
             <td style="color:#666; font-weight:800; font-size:11px;">${code}</td>
-            <td><input class="box-input" style="width:100%; border:none; background:transparent;" value="${name}" ${isCustom && currentCustomItems[customIdx].isManual ? '' : 'readonly'} oninput="updateCustomName(this, ${customIdx})"></td>
+            <td>
+                <input class="box-input" style="width:100%; border:none; background:transparent; padding:0;" value="${name}" ${isCustom && currentCustomItems[customIdx].isManual ? '' : 'readonly'} oninput="if(${isCustom}) currentCustomItems[${customIdx}].name=this.value">
+                <div class="audit-msg" style="color:var(--accent); font-size:11px; font-weight:800; margin-top:2px;"></div>
+            </td>
             <td align="right"><input class="box-input p-input" value="${fmt(price)}" oninput="syncRow(this, '${code}', ${isCustom}, ${customIdx})"></td>
             <td align="center"><input class="box-input q-input" type="number" value="${qty}" step="0.1" oninput="syncRow(this, '${code}', ${isCustom}, ${customIdx})"></td>
             <td align="center"><button class="lock-btn ${isLocked?'active':''}" onclick="toggleLock(this, '${code}', ${isCustom}, ${customIdx})">🔒</button></td>
@@ -254,24 +306,13 @@
         target.appendChild(tr);
     }
 
-    function updateCustomName(el, idx) {
-        if(idx !== null) currentCustomItems[idx].name = el.value;
-    }
-
     function syncRow(el, code, isCustom, idx) {
         const tr = el.closest('tr');
         const p = clean(tr.querySelector('.p-input').value);
         const q = parseFloat(tr.querySelector('.q-input').value) || 0;
         const lock = tr.querySelector('.lock-btn').classList.contains('active');
-        
-        if (carryOverItems.has(code)) {
-            const item = carryOverItems.get(code);
-            item.price = p; item.q = q; item.lock = lock;
-        }
-        if (isCustom && idx !== null) {
-            currentCustomItems[idx].price = p;
-            currentCustomItems[idx].q = q;
-        }
+        if (carryOverItems.has(code)) { const c = carryOverItems.get(code); c.price = p; c.q = q; c.lock = lock; }
+        if (isCustom && idx !== null) { currentCustomItems[idx].price = p; currentCustomItems[idx].q = q; }
         if (el.classList.contains('p-input')) el.value = fmt(p);
         autoBalance();
     }
@@ -281,74 +322,76 @@
         if (isCustom && idx !== null) currentCustomItems[idx].lock = btn.classList.contains('active');
         autoBalance();
     }
-
     function toggleCarry(btn, code) {
         const tr = btn.closest('tr');
         btn.classList.toggle('active');
         if (btn.classList.contains('active')) {
-            carryOverItems.set(code, {
-                name: tr.cells[1].querySelector('input').value,
-                price: clean(tr.querySelector('.p-input').value),
-                q: parseFloat(tr.querySelector('.q-input').value) || 0,
-                nb: tr.dataset.type === 'nb',
-                lock: tr.querySelector('.lock-btn').classList.contains('active')
+            carryOverItems.set(code, { 
+                name: tr.cells[1].querySelector('input').value, 
+                price: clean(tr.querySelector('.p-input').value), 
+                q: parseFloat(tr.querySelector('.q-input').value) || 0, 
+                nb: tr.dataset.type === 'nb', 
+                lock: tr.querySelector('.lock-btn').classList.contains('active') 
             });
         } else { carryOverItems.delete(code); }
     }
 
-    function calc(customTarget = null) {
-        let bSum = 0, nbSum = 0;
+    function calc() {
+        let bSum = 0, nbSum = 0, laSum = 0;
         document.querySelectorAll('#itemList tr').forEach(tr => {
+            const code = tr.dataset.code || "";
             const p = clean(tr.querySelector('.p-input').value);
             const q = parseFloat(tr.querySelector('.q-input').value) || 0;
+            if (code.startsWith('LA')) {
+                laSum += q;
+                const msg = tr.querySelector('.audit-msg');
+                msg.innerText = (code === 'LA357' && q > 1.5) ? "⚠️ LA357 1.5 초과" : "";
+            }
             if(tr.dataset.type === 'b') bSum += (p * q); else nbSum += (p * q);
         });
+        document.getElementById('totalAuditBox').style.display = (laSum > 3.0) ? 'block' : 'none';
         const bPay = Math.floor(Math.floor(bSum * 0.3) / 10) * 10;
-        const totalFull = Math.floor(bSum + nbSum);
-        const finalPay = Math.floor((bPay + nbSum) / 10) * 10;
-
-        return { totalFull, bPay, nbSum, finalPay };
+        return { totalFull: Math.floor(bSum + nbSum), bPay, nbSum: Math.floor(nbSum), finalPay: Math.floor((bPay + nbSum) / 10) * 10 };
     }
 
     function autoBalance() {
         const target = clean(document.getElementById('tAmt').value);
         const res = calc();
         const rows = Array.from(document.querySelectorAll('#itemList tr'));
-        
-        // 조정 항목 선정 (전략약제 우선)
         let tRow = rows.find(r => r.dataset.type === 'nb' && !r.querySelector('.lock-btn').classList.contains('active') && STRATEGY_DRUGS.some(sd => r.querySelector('input').value.includes(sd)));
         if (!tRow) tRow = rows.find(r => r.dataset.type === 'nb' && !r.querySelector('.lock-btn').classList.contains('active'));
 
         if (tRow) {
             const adjName = tRow.querySelector('input').value;
-            document.getElementById('matrixAdjustName').innerText = `[조정 항목: ${adjName}]`;
-            
+            document.getElementById('matrixAdjustName').innerText = `[조정: ${adjName}]`;
             let otherNb = 0;
             rows.forEach(r => { if(r !== tRow && r.dataset.type === 'nb') otherNb += clean(r.querySelector('.p-input').value) * (parseFloat(r.querySelector('.q-input').value) || 0); });
             const pAdj = clean(tRow.querySelector('.p-input').value);
             
             if(pAdj > 0) {
-                // 현재 타겟 계산
                 tRow.querySelector('.q-input').value = ((target - res.bPay - otherNb) / pAdj).toFixed(4);
                 
-                // ★ 멀티 타겟 요약 업데이트 (Matrix)
-                let matrixHTML = '';
-                TARGET_PRESETS.forEach(pt => {
-                    const qProposed = ((pt - res.bPay - otherNb) / pAdj).toFixed(4);
-                    matrixHTML += `<div class="matrix-row"><span class="matrix-target">${fmt(pt)}원</span><span class="matrix-val">${qProposed} ea</span></div>`;
-                });
-                document.getElementById('matrixTable').innerHTML = matrixHTML;
-            }
-        } else {
-            document.getElementById('matrixAdjustName').innerText = `[조정 가능 항목 없음]`;
-            document.getElementById('matrixTable').innerHTML = '';
-        }
+                let mHTML = '';
+                const baseThousand = target % 10000;
+                const startPrice = Math.max(0, Math.floor(target/10000)*10000 - 50000);
+                const endPrice = Math.floor(target/10000)*10000 + 20000;
 
-        const finalRes = calc();
-        document.getElementById('totalFull').innerText = fmt(finalRes.totalFull);
-        document.getElementById('summaryBenefit').innerText = fmt(finalRes.bPay);
-        document.getElementById('summaryNonBenefit').innerText = fmt(finalRes.nbSum);
-        document.getElementById('finalPay').innerText = fmt(finalRes.finalPay);
+                for(let i = startPrice; i <= endPrice; i += 10000) {
+                    const pt = i + baseThousand;
+                    const qP = ((pt - res.bPay - otherNb) / pAdj).toFixed(4);
+                    if(qP >= 0) {
+                        const bgStyle = (pt === target) ? "background:#eef6ff; border-color:var(--blue);" : "";
+                        mHTML += `<div class="matrix-row" onclick="setTarget(${pt})" style="${bgStyle}"><span class="matrix-target">${fmt(pt)}원</span><span class="matrix-val">${qP} ea</span></div>`;
+                    }
+                }
+                document.getElementById('matrixTable').innerHTML = mHTML;
+            }
+        }
+        const f = calc();
+        document.getElementById('totalFull').innerText = fmt(f.totalFull);
+        document.getElementById('summaryBenefit').innerText = fmt(f.bPay);
+        document.getElementById('summaryNonBenefit').innerText = fmt(f.nbSum);
+        document.getElementById('finalPay').innerText = fmt(f.finalPay);
     }
     window.onload = init;
 </script>
