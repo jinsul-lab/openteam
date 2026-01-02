@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>JINSUL DB Converter</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        body { font-family: 'Pretendard', sans-serif; background: #f4f4f4; padding: 40px; display: flex; justify-content: center; }
+        .container { background: white; padding: 40px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); width: 500px; text-align: center; }
+        h2 { margin-bottom: 30px; color: #333; }
+        .file-box { margin-bottom: 20px; text-align: left; }
+        .file-box label { display: block; font-weight: bold; margin-bottom: 8px; color: #555; }
+        input[type="file"] { width: 100%; padding: 10px; border: 2px dashed #ddd; border-radius: 8px; cursor: pointer; }
+        input[type="file"]:hover { border-color: #333; }
+        
+        .btn { width: 100%; padding: 15px; background: #333; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 20px; transition: 0.2s; }
+        .btn:hover { background: #555; }
+        .btn:disabled { background: #ccc; cursor: not-allowed; }
+        
+        #log { margin-top: 20px; font-size: 12px; color: #666; text-align: left; background: #f9f9f9; padding: 10px; border-radius: 5px; height: 150px; overflow-y: auto; white-space: pre-wrap; }
+        .success { color: #28a745; font-weight: bold; }
+        .error { color: #dc3545; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <img src="https://raw.githubusercontent.com/jinsul-lab/openteam/main/jinsul-logo.png" style="width:120px; opacity:0.8; margin-bottom:10px;">
+    <h2>JINSUL 데이터 변환기</h2>
+    
+    <div class="file-box">
+        <label>1. 의치과수가 파일 (xlsx/xlsb/csv)</label>
+        <input type="file" id="feeFile" accept=".xlsx,.xlsb,.csv,.xls" onchange="readFile('fee', this)">
+    </div>
+    <div class="file-box">
+        <label>2. 약가 파일 (csv/xlsx)</label>
+        <input type="file" id="drugFile" accept=".csv,.xlsx,.xls" onchange="readFile('drug', this)">
+    </div>
+    <div class="file-box">
+        <label>3. 치료재료대 파일 (csv/xlsx)</label>
+        <input type="file" id="matFile" accept=".csv,.xlsx,.xls" onchange="readFile('mat', this)">
+    </div>
+    <div class="file-box">
+        <label>4. 처방세트 파일 (xls/xlsx)</label>
+        <input type="file" id="setFile" accept=".xls,.xlsx" onchange="readFile('sets', this)">
+    </div>
+
+    <button id="dnBtn" class="btn" onclick="downloadDB()" disabled>데이터가 없습니다</button>
+    <div id="log">대기 중...</div>
+</div>
+
+<script>
+    const DB = { fee: {}, drug: {}, mat: {}, sets: {} };
+    const counts = { fee: 0, drug: 0, mat: 0, sets: 0 };
+
+    function log(msg, type='') {
+        const el = document.getElementById('log');
+        el.innerHTML += `<div class="${type}">${msg}</div>`;
+        el.scrollTop = el.scrollHeight;
+        updateBtn();
+    }
+
+    function cleanName(str) {
+        if (!str) return "명칭없음";
+        return str.replace(/[^\uAC00-\uD7A30-9a-zA-Z\s\(\)\[\]\-\_\.\/]/g, '').trim();
+    }
+
+    function readFile(type, input) {
+        const file = input.files[0];
+        if (!file) return;
+        
+        log(`[${type}] ${file.name} 분석 시작...`);
+        const reader = new FileReader();
+        
+        reader.onload = (e) => {
+            try {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: true });
+
+                if (type === 'sets') {
+                    parseSets(rows);
+                } else {
+                    parseCommon(type, rows);
+                }
+            } catch (err) {
+                // CSV 인코딩 문제일 수 있으므로 텍스트로 재시도
+                if(type !== 'sets') readAsText(type, file);
+                else log(`[오류] ${err.message}`, 'error');
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    }
+
+    // CSV 텍스트 모드 읽기 (인코딩 대응)
+    function readAsText(type, file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const text = e.target.result; // 브라우저가 자동 감지 시도
+            const rows = text.split('\n').map(line => line.split(',')); // 단순 파싱
+            parseCommon(type, rows);
+        };
+        reader.readAsText(file, 'euc-kr'); // 한국어 윈도우 기본값 시도
+    }
+
+    function parseCommon(type, rows) {
+        let count = 0;
+        // 열 위치 기본값 설정
+        let cIdx = 0, nIdx = 2, pIdx = 3; // 기본: 0=코드, 2=명칭, 3=단가 (수가 기준)
+        
+        if (type === 'drug') { cIdx = 0; nIdx = 6; pIdx = 3; } // 약가 예시
+        if (type === 'mat') { cIdx = 0; nIdx = 2; pIdx = 5; }  // 재료 예시
+
+        // 스마트 헤더 감지 (수가 파일인 경우)
+        if (type === 'fee') {
+            for(let i=0; i<Math.min(10, rows.length); i++) {
+                const r = rows[i].map(x => String(x).replace(/\s/g, ''));
+                if(r.some(v => v.includes('코드'))) {
+                    cIdx = r.findIndex(v => v.includes('코드'));
+                    nIdx = r.findIndex(v => v.includes('명칭') || v.includes('한글명'));
+                    pIdx = r.findIndex(v => v.includes('단가') || v.includes('금액'));
+                    break;
+                }
+            }
+        }
+
+        for (let i = 0; i < rows.length; i++) {
+            const r = rows[i];
+            if (!r || r.length < 3) continue;
+            
+            let code = String(r[cIdx] || '').replace(/"/g, '').trim().toUpperCase();
+            if (code.length >= 4) {
+                let name = cleanName(String(r[nIdx] || '').replace(/"/g, ''));
+                let price = parseInt(String(r[pIdx] || '0').replace(/[^0-9]/g, '')) || 0;
+                
+                DB[type][code] = { n: name, p: price };
+                count++;
+            }
+        }
+        counts[type] = count;
+        log(`[완료] ${type}: ${count.toLocaleString()}건 저장됨`, 'success');
+    }
+
+    function parseSets(rows) {
+        let cur = null, sec = "";
+        let count = 0;
+        DB.sets = {};
+
+        rows.forEach(r => {
+            const a = String(r[0]||"").trim();
+            const c = String(r[2]||"").trim();
+            const rowStr = r.map(x=>String(x)).join(" ");
+
+            if (a.startsWith('+') || a.startsWith('Z')) {
+                cur = a; DB.sets[cur] = { name: String(r[1]||a).trim(), symptoms: [], diags: [], items: [] };
+                sec = ""; count++; return;
+            }
+            if (!cur) return;
+
+            if (rowStr.includes("증상")) sec = "CC"; 
+            else if (rowStr.includes("상병")) sec = "DIAG"; 
+            else if (rowStr.includes("처방") || rowStr.includes("ITEM")) sec = "ITEM";
+
+            if (sec === "CC" && r[4] && !String(r[4]).includes('PLAN')) DB.sets[cur].symptoms.push(r[4]);
+            else if (sec === "DIAG" && r[3]) DB.sets[cur].diags.push({ code: r[3], name: r[4] });
+            else if (sec === "ITEM" && r[3]) {
+                const code = String(r[3]).toUpperCase();
+                if(code.length >= 4) {
+                    DB.sets[cur].items.push({ 
+                        code: code, 
+                        name: cleanName(r[4]), 
+                        qty: parseFloat(r[5])||1, 
+                        isNB: String(r[9]||"").includes('비급여') 
+                    });
+                }
+            }
+        });
+        counts.sets = count;
+        log(`[완료] 처방세트: ${count}개 저장됨`, 'success');
+    }
+
+    function updateBtn() {
+        const total = counts.fee + counts.drug + counts.mat + counts.sets;
+        const btn = document.getElementById('dnBtn');
+        if (total > 0) {
+            btn.disabled = false;
+            btn.innerText = `데이터베이스 다운로드 (총 ${total.toLocaleString()}건)`;
+            btn.style.background = "#007bff";
+        }
+    }
+
+    function downloadDB() {
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(DB));
+        const anchor = document.createElement('a');
+        anchor.setAttribute("href", dataStr);
+        anchor.setAttribute("download", "database.json");
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+    }
+</script>
+
+</body>
+</html>
