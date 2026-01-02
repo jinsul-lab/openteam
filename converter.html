@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>JINSUL - Smart Data Converter (Final)</title>
+    <title>JINSUL - Smart Data Converter (Symptom Fix)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         :root { --primary: #333; --accent: #d73a49; --bg: #f6f6f7; }
@@ -65,7 +65,7 @@
         <div id="dropZone" class="drop-zone">
             <h2>📂 파일을 여기에 놓아주세요</h2>
             <p>수가, 약가, 재료, 세트 파일 (CSV / Excel)</p>
-            <p style="margin-top:15px; color:#d73a49; font-weight:800; font-size:0.85em;">✨ 처방세트 구조 자동 인식 & 한글 복구</p>
+            <p style="margin-top:15px; color:#d73a49; font-weight:800; font-size:0.85em;">✨ 2자리 코드(증상) 자동 분리 & 데이터 보정</p>
         </div>
 
         <div id="logBox" class="log-box">
@@ -188,16 +188,14 @@
         const lowerName = fileName.toLowerCase();
 
         if (isSet) {
-            // [세트 파일 로직 수정: 묶음코드 기억하기]
             let currentSetCode = "";
             let currentSetName = "";
 
             rows.forEach(row => {
                 const cols = row.split(',').map(c => c.trim().replace(/"/g, ''));
                 if (cols.length < 5) return;
-                if (cols[0] === "묶음코드") return; // 헤더 제외
+                if (cols[0] === "묶음코드") return;
 
-                // A열(묶음코드)이 있으면 갱신, 없으면 이전 값 유지 (셀 병합 대응)
                 if (cols[0]) {
                     currentSetCode = cols[0];
                     currentSetName = cols[1];
@@ -206,20 +204,33 @@
                     }
                 }
 
-                // D열(하위코드, idx 3)이 있어야 항목으로 추가
-                const itemCode = cols[3];
+                // C열: 구분, D열: 코드, E열: 명칭
+                const type = cols[2]; 
+                const itemCode = cols[3] ? cols[3].trim() : "";
+                const itemName = cols[4];
+
                 if (currentSetCode && itemCode) {
-                    finalDB.sets[currentSetCode].it.push({
-                        c: itemCode,            // D열: 하위코드
-                        n: cols[4],             // E열: 하위코드명칭
-                        q: parseFloat(cols[5]) || 1, // F열: 총투(수량)
-                        nb: cols[9] === '비급여' // J열: 급여구분
-                    });
+                    // [핵심 수정사항] 2자리 코드이거나 '상병' 타입이면 증상(C.C)으로 분류
+                    if (type === "상병" || itemCode.length === 2) {
+                        // 중복 방지를 위해 이미 있는지 체크 후 추가
+                        const symptomText = `${itemName} (${itemCode})`;
+                        if (!finalDB.sets[currentSetCode].cc.includes(symptomText)) {
+                            finalDB.sets[currentSetCode].cc.push(symptomText);
+                        }
+                    } else {
+                        // 나머지는 처방 항목(Item)으로 추가
+                        finalDB.sets[currentSetCode].it.push({
+                            c: itemCode,            
+                            n: itemName,             
+                            q: parseFloat(cols[5]) || 1, // 수량
+                            nb: cols[9] === '비급여' // 비급여 여부
+                        });
+                    }
                 }
             });
-            log(` - 세트 데이터 구조 분석 완료`);
+            log(` - 세트 데이터 분석 완료 (2자리 코드 증상 처리)`);
         } else {
-            // [일반 파일 로직: 컬럼 위치 자동 매핑]
+            // 일반 파일 처리 (기존과 동일)
             let idxCode = 0, idxName = 1, idxPrice = 2; 
 
             if (lowerName.includes('약가') || lowerName.includes('drug')) {
