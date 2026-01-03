@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>JINSUL - Smart Converter (Fill-Down Fix)</title>
+    <title>JINSUL - Master Converter (TXT Edition)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         :root { --primary: #333; --accent: #d73a49; --bg: #f6f6f7; }
@@ -31,8 +31,8 @@
     <div class="card">
         <div id="dropZone" class="drop-zone">
             <h2>📂 파일을 여기에 놓아주세요</h2>
-            <p>수가, 약가, 재료, 세트 파일 (CSV / Excel)</p>
-            <p style="margin-top:15px; color:#d73a49; font-weight:800; font-size:0.85em;">✨ 빈 칸 자동 인식 & 분류 정확도 100%</p>
+            <p>수가, 약가, 재료 (CSV/Excel) & <span style="color:#d73a49; font-weight:800;">묶음코드.txt</span></p>
+            <p style="margin-top:15px; color:#d73a49; font-weight:800; font-size:0.85em;">✨ 텍스트 파일 정밀 분석 엔진 탑재</p>
         </div>
         <div id="logBox" class="log-box"><div class="log-line">> 시스템 준비 완료.</div></div>
         <button id="dnBtn" class="btn" onclick="downloadJSON()">💾 database.json 저장하기</button>
@@ -52,38 +52,55 @@
     function log(msg) { const div = document.createElement('div'); div.className = 'log-line'; div.textContent = "> " + msg; logBox.appendChild(div); logBox.scrollTop = logBox.scrollHeight; }
 
     async function handleFiles(files) {
-        log(`${files.length}개 파일 감지. 정밀 분석 시작...`);
+        log(`${files.length}개 파일 감지. 분석 시작...`);
         for (const file of Array.from(files)) {
             const name = file.name.toLowerCase();
-            const isSet = name.includes('세트') || name.includes('set');
+            // .txt 파일이거나 이름에 '묶음'/'세트'가 들어가면 세트 파일로 인식
+            const isSet = name.endsWith('.txt') || name.includes('세트') || name.includes('set') || name.includes('묶음');
+            
             const dateMatch = file.name.match(/\d{6,8}/);
             const dateStr = dateMatch ? dateMatch[0].replace(/(\d{4})(\d{2})(\d{2})/, '$1-$2-$3') : "-";
+            
             let cat = 'fee';
             if (name.includes('약가') || name.includes('drug')) cat = 'drug';
             else if (name.includes('재료') || name.includes('mat')) cat = 'mat';
             if (!isSet) finalDB.dates[cat] = dateStr;
+            
             try {
-                if (name.endsWith('.csv')) await processCSV(file, cat, isSet);
-                else await processExcel(file, cat, isSet);
+                if (name.endsWith('.txt')) {
+                    await processTextFile(file, true); // TXT는 무조건 세트 처리
+                } else if (name.endsWith('.csv')) {
+                    await processTextFile(file, isSet);
+                } else {
+                    await processExcel(file, cat, isSet);
+                }
             } catch (e) { log(`❌ [에러] ${file.name}: ${e.message}`); }
         }
         document.getElementById('dnBtn').style.display = 'inline-block';
-        log("✅ 변환 완료! 빈 칸 데이터까지 완벽하게 분류했습니다.");
+        log("✅ 변환 완료! 저장 버튼을 누르세요.");
     }
 
-    function processCSV(file, cat, isSet) {
+    function processTextFile(file, isSet) {
         return new Promise((resolve) => {
             const reader = new FileReader();
             reader.onload = function(e) {
                 const buffer = new Uint8Array(e.target.result);
-                let decoder = new TextDecoder('euc-kr'); let text = decoder.decode(buffer);
-                if ((text.match(/\ufffd/g) || []).length > text.length * 0.05) { decoder = new TextDecoder('utf-8'); text = decoder.decode(buffer); log(`📄 [CSV] ${file.name} (UTF-8)`); } 
-                else { log(`📄 [CSV] ${file.name} (EUC-KR)`); }
-                parseData(text, cat, isSet, file.name); resolve();
+                let decoder = new TextDecoder('euc-kr'); 
+                let text = decoder.decode(buffer);
+                if ((text.match(/\ufffd/g) || []).length > text.length * 0.05) { 
+                    decoder = new TextDecoder('utf-8'); 
+                    text = decoder.decode(buffer); 
+                    log(`📄 [TEXT] ${file.name} (UTF-8)`); 
+                } else { 
+                    log(`📄 [TEXT] ${file.name} (EUC-KR)`); 
+                }
+                parseData(text, 'fee', isSet, file.name); 
+                resolve();
             };
             reader.readAsArrayBuffer(file);
         });
     }
+
     function processExcel(file, cat, isSet) {
         return new Promise((resolve) => {
             const reader = new FileReader();
@@ -92,73 +109,97 @@
                 const workbook = XLSX.read(data, { type: 'array' });
                 const csv = XLSX.utils.sheet_to_csv(workbook.Sheets[workbook.SheetNames[0]]);
                 log(`📊 [Excel] ${file.name} 로드됨`);
-                parseData(csv, cat, isSet, file.name); resolve();
+                parseData(csv, cat, isSet, file.name); 
+                resolve();
             };
             reader.readAsArrayBuffer(file);
         });
     }
 
     function parseData(text, cat, isSet, fileName) {
-        const rows = text.split('\n'); let count = 0; const lowerName = fileName.toLowerCase();
+        const rows = text.split('\n'); 
+        let count = 0; 
+        const lowerName = fileName.toLowerCase();
+        
         if (isSet) {
             let currentSetCode = ""; 
             let currentSetName = "";
-            let currentType = ""; // [핵심] '상병'/'처방' 구분을 기억할 변수
+            let currentType = ""; // 현재 처리 중인 타입 (증상/상병/처방) 기억장치
 
             rows.forEach(row => {
+                // 콤마로 분리 (따옴표 제거)
                 const cols = row.split(',').map(c => c.trim().replace(/"/g, ''));
                 if (cols.length < 5) return;
-                if (cols[0] === "묶음코드") return;
+                
+                // 1. 헤더 건너뛰기
+                if (cols[0].includes('묶음코드') || cols[0].includes('▶')) return;
 
-                // 1. 세트 코드 채우기 (빈 칸이면 윗줄 값 유지)
-                if (cols[0]) { 
+                // 2. 새 세트 감지 (A열에 값이 있으면 새 세트 시작, '+' 기호 포함)
+                if (cols[0] && cols[0].length > 0) { 
                     currentSetCode = cols[0]; 
                     currentSetName = cols[1]; 
-                    currentType = ""; // 세트가 바뀌면 타입도 초기화
-                    if (!finalDB.sets[currentSetCode]) finalDB.sets[currentSetCode] = { n: currentSetName, it: [], dg: [], cc: [] }; 
+                    currentType = ""; // 세트가 바뀌면 타입 초기화
+                    if (!finalDB.sets[currentSetCode]) {
+                        finalDB.sets[currentSetCode] = { n: currentSetName, it: [], dg: [], cc: [] }; 
+                    }
                 }
 
-                // 2. 구분(Type) 채우기 (빈 칸이면 윗줄 값 유지) [핵심 로직]
-                if (cols[2]) {
+                // 3. 타입(구분) 감지 (C열)
+                // 값이 있으면(예: "상병", "처방") 타입을 갱신하고, 비어있으면 이전 타입 유지(Fill-down)
+                if (cols[2] && cols[2].length > 0) {
                     currentType = cols[2];
                 }
 
                 const itemCode = cols[3] ? cols[3].trim() : "";
                 const itemName = cols[4];
 
-                // 유효하지 않은 행 스킵
+                // 유효하지 않은 데이터 건너뛰기
                 if (!currentSetCode || !itemCode) return;
-                if (itemCode === "증상" || itemCode === "상병" || itemCode === "구분") return;
+                if (itemCode === "1" || itemCode === "2" || itemCode === "3") {
+                    // 순번만 있고 내용이 없는 행(예: 증상 2, 3...)이나 실제 증상 텍스트가 있는 경우 처리
+                    // 하지만 보통 itemCode가 1,2,3이고 itemName이 있으면 증상 텍스트임
+                    if (!itemName) return; 
+                }
 
-                // [3단 분류 로직]
-                // ① 코드가 2자리 이하다? -> 증상(C.C)
-                if (itemCode.length <= 2) {
+                // [데이터 분류 로직]
+                // 1) 타입이 '증상'이거나, 코드가 1자리 숫자면 -> 증상(C.C)
+                if (currentType === "증상" || itemCode.length <= 2) {
+                    // 1, 2, 3 같은 순번 코드는 무시하고 텍스트만 가져오기 위함이나, 
+                    // 사용자가 1, 2, 3을 코드란에 쓰고 명칭란에 증상을 쓴 구조임.
                     const symptomText = itemName;
-                    if (!finalDB.sets[currentSetCode].cc.includes(symptomText)) {
+                    if (symptomText && !finalDB.sets[currentSetCode].cc.includes(symptomText)) {
                         finalDB.sets[currentSetCode].cc.push(symptomText);
                     }
                 } 
-                // ② 구분이 '상병'이다? (기억된 값 사용) -> 상병(DG)
+                // 2) 타입이 '상병' -> 상병(DG)
                 else if (currentType === "상병") {
                     const exists = finalDB.sets[currentSetCode].dg.some(d => d.c === itemCode);
                     if (!exists) finalDB.sets[currentSetCode].dg.push({ c: itemCode, n: itemName });
                 } 
-                // ③ 나머지 -> 처방(IT)
+                // 3) 그 외 (처방 등) -> 처방(IT)
                 else {
-                    finalDB.sets[currentSetCode].it.push({ c: itemCode, n: itemName, q: parseFloat(cols[5]) || 1, nb: cols[9] === '비급여' });
+                    finalDB.sets[currentSetCode].it.push({ 
+                        c: itemCode, 
+                        n: itemName, 
+                        q: parseFloat(cols[5]) || 1, 
+                        nb: cols[9].includes('비급여') || cols[9].includes('100/100') // J열 급여구분 체크
+                    });
                 }
             });
-            log(` - 세트 데이터 분석 완료 (구분 빈칸 자동 인식 적용)`);
+            log(` - 묶음코드(TXT) 정밀 분석 완료: ${Object.keys(finalDB.sets).length}개 세트`);
         } else {
-            // [일반 파일]
+            // [일반 파일 처리] - 기존 로직 유지
             let idxCode = 0, idxName = 1, idxPrice = 2;
             if (lowerName.includes('약가') || lowerName.includes('drug')) { idxCode = 0; idxPrice = 3; idxName = 6; }
             else if (lowerName.includes('재료') || lowerName.includes('mat')) { idxCode = 0; idxName = 2; idxPrice = 5; }
             else if (lowerName.includes('수가') || lowerName.includes('fee')) { idxCode = 0; idxName = 2; idxPrice = 3; }
+            
             rows.forEach(row => {
                 const cols = row.split(',').map(c => c.trim().replace(/"/g, ''));
                 if (cols.length < Math.max(idxCode, idxName, idxPrice)) return;
-                const code = cols[idxCode] ? cols[idxCode].toUpperCase() : ""; const name = cols[idxName] || ""; const price = parseFloat((cols[idxPrice] || "0").replace(/,/g, '')) || 0;
+                const code = cols[idxCode] ? cols[idxCode].toUpperCase() : ""; 
+                const name = cols[idxName] || ""; 
+                const price = parseFloat((cols[idxPrice] || "0").replace(/,/g, '')) || 0;
                 if (code && code.length < 20 && code !== "코드" && code !== "수가코드") { finalDB[cat][code] = [name, price]; count++; }
             });
             log(` - ${count}건 데이터 처리 완료`);
