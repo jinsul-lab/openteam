@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>JINSUL - Case Verification System (Set Search)</title>
+    <style>
+        :root { --primary: #333; --accent: #d73a49; --blue: #0052cc; --bg: #f6f6f7; --border: #ccc; }
+        body { margin: 0; background-color: var(--bg); color: var(--primary); font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, 'Helvetica Neue', 'Segoe UI', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif; min-height: 100vh; display: flex; flex-direction: column; align-items: center; overflow-x: hidden; }
+        
+        input, select, button { font-family: inherit; } 
+
+        .wm { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; z-index: 0; }
+        .wm img { width: min(760px, 78vw); opacity: .20; filter: grayscale(1) saturate(0) brightness(.65) contrast(1.05); }
+
+        header { width: 100%; padding: 25px 0; text-align: center; position: relative; z-index: 1; }
+        .top-logo { width: 170px; filter: grayscale(1) brightness(.45) contrast(1.15); opacity: 0.8; }
+        
+        #syncBoard { position: absolute; top: 10px; right: 20px; background: rgba(255,255,255,0.8); border: 1px solid #222; border-radius: 8px; padding: 12px 18px; font-size: 12px; z-index: 1000; box-shadow: 0 4px 15px rgba(0,0,0,0.05); width: 240px; backdrop-filter: blur(5px); }
+        #setBoard { position: absolute; top: 10px; left: 20px; background: rgba(255,255,255,0.8); border: 1px solid #222; border-radius: 8px; padding: 12px 18px; font-size: 12px; z-index: 1000; box-shadow: 0 4px 15px rgba(0,0,0,0.05); width: 240px; backdrop-filter: blur(5px); }
+        #setBoard select { width: 100%; margin-top: 6px; padding: 6px 8px; border-radius: 10px; border: 1px solid #ddd; font-weight: 700; font-size: 12px; background: rgba(255,255,255,0.9); }
+        .sync-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+        .sync-row:last-child { margin-bottom: 0; }
+        .sync-label { color: #555; font-weight: 700; }
+        .sync-val { font-weight: 800; color: #333; }
+
+        .container { width: 1550px; max-width: 98%; margin: 0 auto; display: grid; grid-template-columns: 1.75fr 1.25fr; gap: 25px; padding-bottom: 80px; position: relative; z-index: 1; flex: 1; }
+        
+        .card { 
+            background: rgba(255, 255, 255, 0.2); 
+            border: 1px solid rgba(0,0,0,0.08); 
+            border-radius: 12px; 
+            padding: 25px; 
+            backdrop-filter: blur(2px); 
+            margin-bottom: 20px; 
+            box-shadow: 0 5px 20px rgba(0,0,0,0.02); 
+        }
+        
+        .section-title { 
+            font-size: 0.95em; 
+            font-weight: 800; 
+            color: #555; 
+            margin: 0 0 12px 0; 
+            border-left: 4px solid var(--primary); 
+            padding-left: 10px; 
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        /* 토글 스위치 */
+        .switch { position: relative; display: inline-block; width: 34px; height: 20px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 20px; }
+        .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: var(--blue); }
+        input:checked + .slider:before { transform: translateX(14px); }
+
+        .consult-group { display: flex; gap: 8px; margin-bottom: 20px; }
+        .c-btn { flex: 1; padding: 12px; border: 1px solid rgba(0,0,0,0.2); border-radius: 8px; background: rgba(255,255,255,0.4); cursor: pointer; font-weight: 800; font-size: 13px; color: #444; transition: 0.2s; }
+        .c-btn:hover { background: rgba(255,255,255,0.6); }
+        .c-btn.active { border-color: var(--primary); background: var(--primary); color: #fff; }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th { padding: 8px 10px; text-align: left; font-size: 0.8em; color: #666; border-bottom: 2px solid rgba(0,0,0,0.1); background: transparent !important; }
+        td { padding: 6px 10px; background: transparent !important; font-size: 0.95em; font-weight: 600; border-bottom: 1px solid rgba(0,0,0,0.05); vertical-align: middle; }
+        
+        .input-wrapper {
+            position: relative;
+            border: 1px solid rgba(0,0,0,0.2);
+            border-radius: 4px;
+            padding: 0 24px 0 8px;
+            background: rgba(255,255,255,0.3);
+            display: flex;
+            align-items: center;
+            height: 32px;
+            transition: 0.2s;
+        }
+        .input-wrapper:focus-within {
+            border-color: var(--blue);
+            background: rgba(255,255,255,0.8);
+            box-shadow: 0 0 0 2px rgba(0, 82, 204, 0.1);
+        }
+        .input-wrapper::after {
+            content: '✎';
+            position: absolute;
+            right: 6px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 12px;
+            color: #999;
+            pointer-events: none;
+        }
+
+        .box-input { 
+            border: none; 
+            background: transparent !important; 
+            width: 100%; 
+            font-weight: 800; 
+            font-family: inherit; 
+            outline: none; 
+            font-size: 13px; 
+            color: #333; 
+            height: 100%;
+        }
+        
+        .box-input-num { border: 1px solid rgba(0,0,0,0.25); border-radius: 4px; background: transparent !important; padding: 0 4px; height: 32px; font-weight: 800; outline: none; font-size: 13px; width: 100%; transition: 0.2s; color: #333; text-align: center; }
+        .box-input-num:focus { border-color: var(--blue); background: rgba(255,255,255,0.2) !important; }
+
+        .type-btn { border: 1px solid transparent; border-radius: 6px; padding: 0 10px; height: 28px; font-size: 11px; font-weight: 800; cursor: pointer; transition: 0.2s; width: 65px; text-align: center; }
+        .type-btn:hover { transform: translateY(-1px); box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .type-b { background: #e3f2fd; color: #0052cc; border-color: #bbdefb; }
+        .type-nb { background: #ffeef0; color: #d73a49; border-color: #ffcdd2; }
+
+        .badge { display: inline-block; padding: 2px 6px; font-size: 10px; border-radius: 4px; font-weight: 900; margin-left: 6px; white-space: nowrap; letter-spacing: -0.5px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .badge-req { background: #fff3e0; color: #ef6c00; border: 1px solid #ffe0b2; }
+        .badge-con { background: #e8f5e9; color: #2e7d32; border: 1px solid #c8e6c9; }
+
+        .p-input { width: 90px; text-align: right; color: #333; }
+        .q-input { width: 60px; text-align: center; color: var(--accent); }
+
+        .diag-table { width: 100%; margin-bottom: 25px; }
+        .diag-table td { padding: 8px 10px; background: transparent !important; border-bottom: 1px dashed rgba(0,0,0,0.1); color: #444; }
+        .diag-code { font-weight: 800; color: var(--blue); }
+
+        /* [수정] 코드 선택 영역 스타일링 */
+        .set-selector-group {
+            display: flex;
+            gap: 10px;
+            position: relative;
+        }
+        #setSel { 
+            flex: 1; 
+            background: rgba(255,255,255,0.3); 
+            border: 2px solid rgba(0,0,0,0.2); 
+            border-radius: 8px; 
+            padding: 12px; 
+            outline: none; 
+            cursor: pointer; 
+            font-weight: 800;
+            font-size: 1.1em;
+        }
+        #setSearchInput {
+            width: 140px;
+            border: 2px solid rgba(0,0,0,0.2);
+            border-radius: 8px;
+            padding: 0 12px;
+            background: rgba(255,255,255,0.5);
+            font-weight: 800;
+            outline: none;
+            font-size: 13px;
+        }
+        #setSearchInput:focus { border-color: var(--blue); background: #fff; }
+
+        .summary-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px dashed rgba(0,0,0,0.1); }
+        .summary-label { font-size: 13px; font-weight: 700; color: #666; }
+        .summary-val { font-size: 16px; font-weight: 900; color: #333; }
+        
+        .target-input { font-size: 2.2em; width: 180px; background: none; border: none; border-bottom: 3px solid var(--primary); color: var(--primary); text-align: right; font-weight: 900; outline: none; }
+        #finalPay { font-size: 3.2em; font-weight: 900; color: var(--accent); letter-spacing: -2px; line-height: 1; }
+
+        .matrix-container { display: grid; grid-template-columns: repeat(1, 1fr); gap: 6px; margin-top: 15px; }
+        .matrix-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; background: rgba(255,255,255,0.4); border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; font-size: 12px; cursor: pointer; transition: 0.2s; }
+        .matrix-row:hover { background: rgba(240, 247, 255, 0.6); border-color: var(--blue); transform: translateY(-1px); box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .matrix-target { font-weight: 800; color: #555; }
+        .matrix-val { font-weight: 900; color: var(--blue); font-size: 13px; }
+
+        .carry-btn { background: none; border: none; font-size: 1.1em; cursor: pointer; opacity: 0.3; transition: 0.2s; }
+        .carry-btn.active { opacity: 1; color: var(--blue); }
+        .del-btn { background: none; border: none; font-size: 1.1em; cursor: pointer; opacity: 1; color: #999; transition: 0.2s; } 
+        .del-btn:hover { color: #d73a49; transform: scale(1.15); }
+
+        /* 통합 검색 레이어 스타일 */
+        .search-dropdown { 
+            position: absolute; 
+            background: rgba(255,255,255,0.98); 
+            z-index: 9999; 
+            border-radius: 8px; 
+            box-shadow: 0 5px 20px rgba(0,0,0,0.15); 
+            display: none; 
+            max-height: 300px; 
+            overflow-y: auto; 
+            border: 1px solid #ddd; 
+            width: 300px;
+        }
+        .search-item { padding: 10px 12px; border-bottom: 1px solid #eee; cursor: pointer; display: flex; justify-content: space-between; font-size: 12px; }
+        .search-item:hover { background: #f5f5f5; }
+
+        .alert-box { padding: 12px 15px; border-radius: 8px; font-weight: 800; font-size: 13px; margin-bottom: 15px; display: none; border: 1px solid transparent; }
+        .alert-red { background: rgba(255, 240, 241, 0.7); color: #d73a49; border-color: #d73a49; }
+        .alert-orange { background: rgba(255, 248, 230, 0.7); color: #b7791f; border-color: #b7791f; }
+
+        footer { width: 100%; text-align: center; padding: 50px 0; font-size: 12px; color: #888; background: transparent; font-weight: 600; }
+    </style>
+</head>
+<body onclick="closeSearch(event)">
+
+<div class="wm"><img src="https://raw.githubusercontent.com/jinsul-lab/openteam/main/jinsul-logo.png"></div>
+
+
+<div id="setBoard">
+    <div class="sync-row"><span class="sync-label">처방세트 파일</span><span id="setFileStatus" class="sync-val">-</span></div>
+    <select id="setFileSel" onchange="changeSetFile()">
+        <option value="">로딩중...</option>
+    </select>
+</div>
+
+<div id="syncBoard">
+    <div class="sync-row"><span class="sync-label">수가 적용일자</span><span id="st-date" class="sync-val">-</span></div>
+    <div class="sync-row"><span class="sync-label">데이터 누적수</span><span id="st-db" class="sync-val">...</span></div>
+</div>
+
+<header><img src="https://raw.githubusercontent.com/jinsul-lab/openteam/main/jinsul-logo.png" class="top-logo"></header>
+
+<div class="container">
+    <div class="main-column">
+        <div class="card">
+            <div class="section-title">진찰료 산정</div>
+            <div class="consult-group">
+                <button onclick="setConsult('first')" id="btn-first" class="c-btn">초진</button>
+                <button onclick="setConsult('follow')" id="btn-follow" class="c-btn">재진</button>
+                <button onclick="setConsult('none')" id="btn-none" class="c-btn active">산정 안함</button>
+            </div>
+
+            <div class="section-title">코드 선택</div>
+            <div class="set-selector-group">
+                <select id="setSel" onchange="changeSet()"></select>
+                <input type="text" id="setSearchInput" placeholder="🔍 세트 검색" oninput="searchSets(this.value, this)" onkeydown="if(event.key==='Escape') clearSearch()">
+            </div>
+            
+            <div id="dataView" style="display:none; margin-top:30px;">
+                <div class="section-title">
+                    <span>환자 증상 (C.C)</span>
+                    <label class="switch">
+                        <input type="checkbox" id="ccSwitch" checked onchange="toggleCC()">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div id="ccContent" style="padding:15px; background:rgba(0,0,0,0.05); border-radius:8px; font-size:0.95em; line-height:1.6; margin-bottom:30px; border-left: 0px solid #999; min-height:20px; font-weight: 600;"></div>
+
+                <div id="diagSection" style="display:none;">
+                    <div class="section-title" style="border-left-color: var(--blue); color:var(--blue); cursor: default;">상병 내역</div>
+                    <table class="diag-table">
+                        <thead><tr><th style="width:20%">상병코드</th><th>상병명칭</th></tr></thead>
+                        <tbody id="diagList"></tbody>
+                    </table>
+                </div>
+                
+                <div class="section-title" style="cursor: default;">처방 내역 / 비급여 조정</div>
+                <div id="mainAlertBox" class="alert-box"></div>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width:15%">처방코드</th>
+                            <th>처방명칭</th>
+                            <th style="width:18%; text-align:right;">단가</th>
+                            <th style="width:12%; text-align:center;">수량</th>
+                            <th style="width:10%; text-align:center;">구분</th>
+                            <th style="width:6%; text-align:center;">유지</th>
+                            <th style="width:6%; text-align:center;">삭제</th>
+                        </tr>
+                    </thead>
+                    <tbody id="itemList"></tbody>
+                </table>
+
+                <div style="margin-top:20px; display:flex; gap:10px; position:relative;" id="searchBox">
+                    <input type="text" id="searchInput" placeholder="명칭 또는 코드로 처방 검색" 
+                           style="flex:1; padding:12px; border-radius:8px; border:2px solid rgba(0,0,0,0.2); font-weight:800; outline:none; font-size: 13px; background: rgba(255,255,255,0.3);"
+                           oninput="searchLive(this.value, 'main', this)" onkeydown="if(event.key==='Escape') clearSearch()">
+                    <button onclick="addManualItem()" style="padding:0 20px; background:rgba(255,255,255,0.5); border:2px solid var(--primary); border-radius:8px; font-weight:800; cursor:pointer; font-size:12px;">+ 임의 추가</button>
+                </div>
+
+                <button onclick="autoBalance()" style="background:var(--primary); color:white; width:100%; padding:18px; border:none; border-radius:10px; font-weight:900; margin-top:30px; cursor:pointer; font-size:1.05em; letter-spacing: 1px;">계산</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="side-column">
+        <div class="card" style="background: rgba(255, 255, 255, 0.1); text-align: center; padding: 30px 20px;">
+            <div style="font-size: 0.85em; color: #666; margin-bottom: 10px; font-weight: 800; letter-spacing: 1px;">목표가</div>
+            <div>
+                <input type="number" id="tAmt" class="target-input" value="89000" oninput="autoBalance()"> <span style="font-size: 1.2em; font-weight: 900;">원</span>
+            </div>
+        </div>
+
+        <div class="card" style="border-top: 6px solid var(--primary);">
+            <div class="summary-row"><span class="summary-label">총 진료비 합계</span><span id="totalFull" class="summary-val">0</span></div>
+            <div class="summary-row"><span class="summary-label">급여 (본인부담 30%)</span><span id="summaryBenefit" class="summary-val">0</span></div>
+            <div class="summary-row" style="border-bottom:none;"><span class="summary-label">비급여 (100% 전액)</span><span id="summaryNonBenefit" class="summary-val" style="color:var(--blue);">0</span></div>
+            
+            <div style="text-align: center; margin-top: 25px; padding-top: 20px; border-top: 2px solid rgba(0,0,0,0.1);">
+                <div style="font-size: 12px; color: #777; font-weight: 800; margin-bottom: 8px;">최종 실제 수납액</div>
+                <div id="finalPay">0</div>
+            </div>
+
+            <div class="section-title" style="margin-top:40px; border-left-color: var(--blue);">금액별 조정 (Matrix)</div>
+            <div id="matrixAdjustName" style="font-size:11px; color:var(--blue); font-weight:800; margin-bottom:10px; text-align:right;">-</div>
+            <div id="matrixTable" class="matrix-container"></div>
+        </div>
+    </div>
+</div>
+
+<div id="globalSearchLayer" class="search-dropdown"></div>
+
+<footer>© JINSUL · 경험과 가치를 현실화하는 컨설팅</footer>
+
+<script>
+    const LOCAL_DATA = {}; 
+
+    let DB = LOCAL_DATA;
+    let flatDB = [];
+    let carryOverItems = new Map();
+    let currentCustomItems = []; 
+    let deletedSetItems = new Set();
+    const STRATEGY_DRUGS = ["비엠히루니다제", "말린다주", "리포라제주"];
+    const CONTRAST_REQUIRED_CODES = ["LA354", "LA359", "LA253", "LA355", "LA352", "HA280", "MM410"];
+    const CONTRAST_KEYWORDS = [
+        "OMNI", "VISI", "IOP", "HEX", "BONO", "CONTRAST", 
+        "옴니", "울트라", "가도", "파미", "비지", "이오", "헥사", "보노", "도타", "게네", "센스", "파큐", "유니", "마그네", "클라리"
+    ];
+    
+    let CONSULT_PRICES = { first: 0, follow: 0 };
+    let currentConsult = "none";
+    let activeInputEl = null;
+
+    const fmt = n => Math.floor(n || 0).toLocaleString();
+    const clean = n => parseFloat(String(n).replace(/,/g, '')) || 0;
+
+    
+    // [신규] GitHub(main)에서 JSON 분리 로드 (fee/drug/mat) + set*.json(병원별 처방세트)
+    const GITHUB_OWNER = "jinsul-lab";
+    const GITHUB_REPO = "openteam";
+    const GITHUB_BRANCH = "main";
+    const RAW_BASE = `https://raw.githubusercontent.com/${GITHUB_OWNER}/${GITHUB_REPO}/${GITHUB_BRANCH}/`;
+    const API_BASE = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/`;
+
+    const unwrapData = (obj) => (obj && typeof obj === 'object' && obj.data && typeof obj.data === 'object') ? obj.data : obj;
+
+    async function fetchJsonFromGithub(fileName) {
+        const res = await fetch(RAW_BASE + fileName + "?t=" + Date.now());
+        if (!res.ok) throw new Error("fetch 실패: " + fileName);
+        return await res.json();
+    }
+
+    async function listSetFiles() {
+        // 레포 루트에서 set*.json 자동 탐색
+        try {
+            const res = await fetch(API_BASE + "?ref=" + GITHUB_BRANCH);
+            if (!res.ok) throw new Error("list 실패");
+            const items = await res.json();
+            return (Array.isArray(items) ? items : [])
+                .filter(it => it && it.type === "file" && /^set.*\.json$/i.test(it.name))
+                .map(it => it.name)
+                .sort((a,b) => a.localeCompare(b));
+        } catch(e) {
+            console.warn("set*.json 목록 조회 실패:", e);
+            return [];
+        }
+    }
+
+    function refreshSetCodes() {
+        const sel = document.getElementById('setSel');
+        if (!sel) return;
+        if (!DB.sets || Object.keys(DB.sets).length === 0) {
+            sel.innerHTML = '<option value="">-- 처방 코드를 선택하세요 --</option>';
+            return;
+        }
+        sel.innerHTML = '<option value="">-- 처방 코드를 선택하세요 --</option>' + 
+            Object.keys(DB.sets).sort().map(k => `<option value="${k}">[${k}] ${DB.sets[k].n}</option>`).join('');
+    }
+
+    // set 파일 선택/로드
+    let CURRENT_SET_FILE = "";
+    async function changeSetFile() {
+        const sel = document.getElementById('setFileSel');
+        const file = sel ? sel.value : "";
+        if (!file) return;
+
+        try {
+            document.getElementById('setFileStatus').innerText = "로딩...";
+            const raw = await fetchJsonFromGithub(file);
+            const sets = unwrapData(raw);
+            DB.sets = sets && typeof sets === 'object' ? sets : {};
+            CURRENT_SET_FILE = file;
+
+            // 세트 코드 목록 갱신
+            refreshSetCodes();
+
+            // 선택 초기화 + 화면 초기화
+            document.getElementById('setSel').value = "";
+            document.getElementById('dataView').style.display = 'none';
+
+            currentCustomItems = [];
+            deletedSetItems.clear();
+            document.getElementById('ccSwitch').checked = true;
+            document.getElementById('ccContent').style.display = 'block';
+
+            document.getElementById('setFileStatus').innerText = file;
+        } catch(e) {
+            console.error("set 파일 로드 실패:", e);
+            document.getElementById('setFileStatus').innerText = "로드 실패";
+            DB.sets = {};
+            refreshSetCodes();
+        }
+    }
+
+    // [핵심] poket(포켓) 자동 분리: it 안에 섞인 PLAN/메모/증상/상병을 cc/dg로 정리
+    function dbHasCode(codeUpper) {
+        return !!(
+            (DB.fee && DB.fee[codeUpper]) ||
+            (DB.drug && DB.drug[codeUpper]) ||
+            (DB.mat && DB.mat[codeUpper])
+        );
+    }
+
+    function looksLikeCC(codeRaw, nameRaw) {
+        const c = (codeRaw || "").toString().trim();
+        const n = (nameRaw || "").toString().trim();
+        if (!c && !n) return true;
+
+        if (/^\d+$/.test(c) && c.length <= 3) return true;  // 2,3,4... 같은 번호 라인(짧은 코드만)
+        if (/^\d+\.\s*/.test(n)) return true;             // "1. C : ..." 같은 라인
+        if (/^▼.*▼$/.test(n)) return true;                // "▼PLAN▼", "▼F/U▼"
+        if (n.startsWith("*")) return true;               // "* 주기치료사..."
+        if (n.endsWith(":")) return true;                 // "경과일 :" "다음 주사일 :"
+        const hints = ["PLAN", "F/U", "경과일", "다음 주사일", "주기치료사"];
+        if (hints.some(h => n.toUpperCase().includes(h.toUpperCase()))) return true;
+
+        return false;
+    }
+
+    function looksLikeDiagnosis(codeUpper, nameRaw) {
+        if (dbHasCode(codeUpper)) return false;           // DB에 있으면 처방 항목
+
+        // 진단코드는 (우리 데이터 기준) 보통 1글자 + 숫자 형태: M5456, S2340, T140...
+        // 2글자 코드(IO300 등)는 약품/재료 성격이 많아 진단으로 분류하지 않음
+        if (!/^[A-Z]\d{2,5}$/.test(codeUpper)) return false;
+
+        const n = (nameRaw || "").toString();
+        // 진단이 아니라 시술/검사/치료 성격이면 제외
+        const procHints = ["술", "검사", "촬영", "초음파", "주사", "차단", "...리", "치료", "시술", "테이핑", "C-ARM", "MRI", "X-RAY", "XRAY", "Xray"];
+        if (procHints.some(h => n.includes(h))) return false;
+
+        return true;
+    }
+
+    function normalizeSet(setObj) {
+        if (!setObj || typeof setObj !== 'object') return setObj;
+        if (setObj.__normalized) return setObj;
+
+        const cc = Array.isArray(setObj.cc) ? [...setObj.cc] : [];
+        const dg = Array.isArray(setObj.dg) ? [...setObj.dg] : [];
+        const it = Array.isArray(setObj.it) ? [...setObj.it] : [];
+
+        const newIt = [];
+        it.forEach(item => {
+            const cRaw = (item && item.c != null) ? String(item.c).trim() : "";
+            const nRaw = (item && item.n != null) ? String(item.n).trim() : "";
+            const codeUpper = cRaw.toUpperCase();
+
+            // 빈 줄(번호만 있고 내용 없음)은 무시
+            if (/^\d+$/.test(cRaw) && nRaw === "") return;
+
+            if (looksLikeCC(cRaw, nRaw)) {
+                if (nRaw) cc.push(nRaw);
+                return;
+            }
+
+            if (looksLikeDiagnosis(codeUpper, nRaw)) {
+                dg.push({ c: cRaw, n: nRaw || cRaw });
+                return;
+            }
+
+            newIt.push(item);
+        });
+
+        return { ...setObj, cc, dg, it: newIt, __normalized: true };
+    }
+
+    async function init() {
+        try {
+            // fee/drug/mat 분리 로드
+            DB = { fee: {}, drug: {}, mat: {}, sets: {}, dates: {} };
+            let datesFromDatabase = null;
+
+            try {
+                const feeRaw = await fetchJsonFromGithub("fee.json");
+                DB.fee = unwrapData(feeRaw);
+            } catch(e) { console.warn("fee.json 로드 실패", e); }
+
+            try {
+                const drugRaw = await fetchJsonFromGithub("drug.json");
+                DB.drug = unwrapData(drugRaw);
+            } catch(e) { console.warn("drug.json 로드 실패", e); }
+
+            try {
+                const matRaw = await fetchJsonFromGithub("mat.json");
+                DB.mat = unwrapData(matRaw);
+            } catch(e) { console.warn("mat.json 로드 실패", e); }
+
+
+            // fee/drug/mat 중 일부가 비어 있으면 기존 database.json에서 보강(호환용)
+            try {
+                if (!DB.fee || Object.keys(DB.fee).length === 0 ||
+                    !DB.drug || Object.keys(DB.drug).length === 0 ||
+                    !DB.mat || Object.keys(DB.mat).length === 0) {
+                    const resAll = await fetch(RAW_BASE + "database.json?t=" + Date.now());
+                    if (resAll.ok) {
+                        const dbAll = await resAll.json();
+                        if (dbAll) {
+                            if ((!DB.fee || Object.keys(DB.fee).length === 0) && dbAll.fee) DB.fee = dbAll.fee;
+                            if ((!DB.drug || Object.keys(DB.drug).length === 0) && dbAll.drug) DB.drug = dbAll.drug;
+                            if ((!DB.mat || Object.keys(DB.mat).length === 0) && dbAll.mat) DB.mat = dbAll.mat;
+                        }
+                    }
+                }
+            } catch(e) {}
+
+            // (표시용) dates는 기존 database.json에서 가져오되, fee/drug/mat은 위 값을 유지
+            try {
+                const resDates = await fetch(RAW_BASE + "database.json?t=" + Date.now());
+                if (resDates.ok) {
+                    const dbAll = await resDates.json();
+                    if (dbAll && dbAll.dates) datesFromDatabase = dbAll.dates;
+                }
+            } catch(e) {}
+
+            if (datesFromDatabase) DB.dates = datesFromDatabase;
+
+            // syncBoard
+            let displayDate = "-";
+            if (DB.dates && DB.dates.fee && DB.dates.fee !== "-") displayDate = DB.dates.fee;
+            document.getElementById('st-date').innerText = displayDate;
+
+            // 진찰료 버튼
+            const feeFirst = getFeePrice('AA154') || 17610;
+            const feeFollow = getFeePrice('AA254') || 12590;
+            CONSULT_PRICES = { first: feeFirst, follow: feeFollow };
+            document.getElementById('btn-first').innerText = `초진 (${fmt(feeFirst)})`;
+            document.getElementById('btn-follow').innerText = `재진 (${fmt(feeFollow)})`;
+
+            // flatDB 재구성 (검색용)
+            flatDB = [];
+            const cats = ["fee", "drug", "mat"];
+            cats.forEach(cat => {
+                if (!DB[cat]) return;
+                for (let code in DB[cat]) {
+                    flatDB.push({ code, name: DB[cat][code][0], price: DB[cat][code][1] });
+                }
+            });
+            document.getElementById('st-db').innerText = fmt(flatDB.length) + "건";
+
+            // 세트코드 드롭다운 초기화
+            refreshSetCodes();
+
+            // set*.json 파일 드롭다운 준비
+            const files = await listSetFiles();
+            const setSel = document.getElementById('setFileSel');
+            if (setSel) {
+                if (files.length === 0) {
+                    setSel.innerHTML = '<option value="">set*.json 없음</option>';
+                    document.getElementById('setFileStatus').innerText = "-";
+                } else if (files.length === 1) {
+                    setSel.innerHTML = `<option value="${files[0]}">${files[0]}</option>`;
+                    setSel.value = files[0];
+                    await changeSetFile(); // 1개면 자동 적용
+                } else {
+                    setSel.innerHTML = '<option value="">선택...</option>' + files.map(f => `<option value="${f}">${f}</option>`).join('');
+                    // 여러 개면 자동선택하지 않고 사용자 선택(원하면 첫번째 자동으로 바꾸려면 여기 수정)
+                    document.getElementById('setFileStatus').innerText = "-";
+                }
+            }
+        } catch(e) {
+            console.error("DB 로드 실패", e);
+        }
+    }
+
+
+    function getFeePrice(code) {
+        if(DB.fee && DB.fee[code]) return DB.fee[code][1];
+        if(DB.fee) { const key = Object.keys(DB.fee).find(k => k.startsWith(code)); if(key) return DB.fee[key][1]; }
+        return 0;
+    }
+
+    function setTarget(val) { document.getElementById('tAmt').value = val; autoBalance(); }
+    
+    function changeSet() { 
+        currentCustomItems = []; 
+        deletedSetItems.clear(); 
+        document.getElementById('ccSwitch').checked = true;
+        document.getElementById('ccContent').style.display = 'block';
+        renderItems(); 
+    }
+    
+    function setConsult(type) {
+        currentConsult = type;
+        document.querySelectorAll('.c-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById('btn-' + type).classList.add('active');
+        renderItems();
+    }
+
+    function toggleCC() {
+        const box = document.getElementById('ccContent');
+        const sw = document.getElementById('ccSwitch');
+        box.style.display = sw.checked ? 'block' : 'none';
+    }
+
+    // [신규] 세트 검색 기능
+    function searchSets(val, inputEl) {
+        const layer = document.getElementById('globalSearchLayer');
+        activeInputEl = inputEl; // 세트 선택용 마킹
+
+        if(!val || val.length < 1) { layer.style.display = 'none'; return; }
+
+        const rect = inputEl.getBoundingClientRect();
+        layer.style.top = (rect.bottom + window.scrollY + 5) + 'px';
+        layer.style.left = (rect.left + window.scrollX) + 'px';
+        layer.style.width = Math.max(300, rect.width) + 'px';
+
+        const keys = Object.keys(DB.sets);
+        const filtered = keys.filter(k => k.includes(val.toUpperCase()) || DB.sets[k].n.includes(val)).slice(0, 30);
+
+        layer.innerHTML = filtered.map(k => `
+            <div class="search-item" onclick="selectSetFromSearch('${k}')">
+                <span style="color:#0052cc; font-weight:800;">${k}</span>
+                <span style="flex:1; margin:0 10px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${DB.sets[k].n}</span>
+            </div>`).join('');
+        
+        layer.style.display = filtered.length ? 'block' : 'none';
+    }
+
+    function selectSetFromSearch(key) {
+        document.getElementById('setSel').value = key;
+        document.getElementById('setSearchInput').value = '';
+        clearSearch();
+        changeSet();
+    }
+
+    // 통합 검색 로직 (처방, 코드, 세트 공용)
+    function searchLive(val, mode, inputEl) {
+        activeInputEl = inputEl;
+        const layer = document.getElementById('globalSearchLayer');
+        
+        if(!val || val.length < 2) { layer.style.display = 'none'; return; }
+        
+        const rect = inputEl.getBoundingClientRect();
+        layer.style.top = (rect.bottom + window.scrollY + 5) + 'px';
+        layer.style.left = (rect.left + window.scrollX) + 'px';
+        layer.style.width = Math.max(300, rect.width) + 'px';
+
+        const filtered = flatDB.filter(i => i.code.includes(val.toUpperCase()) || i.name.includes(val)).slice(0, 30);
+        
+        layer.innerHTML = filtered.map(i => `
+            <div class="search-item" onclick="selectItem('${i.code}', '${i.name.replace(/'/g, "\\'")}', ${i.price}, '${mode}')">
+                <span style="color:#0052cc; font-weight:800;">${i.code}</span>
+                <span style="flex:1; margin:0 10px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${i.name}</span>
+                <b>${fmt(i.price)}</b>
+            </div>`).join('');
+        layer.style.display = filtered.length ? 'block' : 'none';
+    }
+
+    function selectItem(code, name, price, mode) {
+        const layer = document.getElementById('globalSearchLayer');
+        if (mode === 'main') {
+            addSearchedItem(code, name, price);
+        } else if (mode === 'cell' && activeInputEl) {
+            const tr = activeInputEl.closest('tr');
+            const codeInput = tr.querySelector('.box-input.code-type'); 
+            codeInput.value = code; 
+            updateRowByCode(codeInput, tr.dataset.custom === 'true', tr.dataset.idx);
+        }
+        layer.style.display = 'none';
+        activeInputEl = null;
+    }
+
+    function clearSearch() { document.getElementById('globalSearchLayer').style.display = 'none'; }
+    function closeSearch(e) { 
+        if (!e.target.closest('#searchBox') && !e.target.closest('.input-wrapper') && !e.target.closest('.set-selector-group') && !e.target.closest('.search-dropdown')) {
+            clearSearch();
+        }
+    }
+    
+    function addSearchedItem(code, name, price) {
+        let finalPrice = price; if (STRATEGY_DRUGS.some(sd => name.includes(sd))) finalPrice = 100000;
+        currentCustomItems.push({ code, name, price: finalPrice, q: 1, nb: false, lock: false, isManual: false });
+        clearSearch(); document.getElementById('searchInput').value = ''; renderItems();
+    }
+    
+    function addManualItem() { 
+        currentCustomItems.push({ code: "ETC", name: "임의 항목", price: 0, q: 1, nb: false, lock: false, isManual: true }); 
+        renderItems(); 
+    }
+
+    function renderItems() {
+        const key = document.getElementById('setSel').value;
+        if(!key) return;
+        let set = DB.sets[key];
+        set = normalizeSet(set);
+        DB.sets[key] = set;
+        document.getElementById('dataView').style.display = 'block';
+        
+        document.getElementById('ccContent').innerHTML = (set.cc && set.cc.length > 0) ? set.cc.join('<br>') : "등록된 증상 없음";
+        
+        const diagList = set.dg || [];
+        const diagSection = document.getElementById('diagSection');
+        const diagTbody = document.getElementById('diagList');
+        diagTbody.innerHTML = '';
+        
+        if (diagList.length > 0) {
+            diagSection.style.display = 'block';
+            diagList.forEach(d => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td class="diag-code">${d.c}</td><td>${d.n}</td>`;
+                diagTbody.appendChild(tr);
+            });
+        } else {
+            diagSection.style.display = 'none';
+        }
+
+        const tbody = document.getElementById('itemList');
+        tbody.innerHTML = '';
+        
+        if(currentConsult !== "none") {
+            const price = CONSULT_PRICES[currentConsult];
+            const name = currentConsult === 'first' ? "진찰료(초진)" : "진찰료(재진)";
+            addRow(tbody, "CONST", name, price, 1, false, true, false);
+        }
+
+        set.it.forEach(item => {
+            const code = item.c.toUpperCase();
+            if (deletedSetItems.has(code)) return; 
+
+            if (carryOverItems.has(code)) {
+                const c = carryOverItems.get(code);
+                addRow(tbody, code, c.name, c.price, c.q, c.nb, c.lock, true);
+            } else {
+                const info = DB.fee[code] || DB.drug[code] || DB.mat[code] || null;
+                let name = info ? info[0] : (item.n || code);
+                let price = info ? info[1] : 0;
+                if (STRATEGY_DRUGS.some(sd => name.includes(sd))) price = 100000;
+                addRow(tbody, code, name, price, item.q, item.nb, !item.nb || code.includes('SONO') || code.includes('C-ARM'), false);
+            }
+        });
+
+        currentCustomItems.forEach((item, idx) => {
+            if (carryOverItems.has(item.code)) return;
+            if (item.isDeleted) return; 
+            addRow(tbody, item.code, item.name, item.price, item.q, item.nb, item.lock, false, true, idx);
+        });
+
+        carryOverItems.forEach((c, code) => {
+            const exists = Array.from(tbody.rows).some(r => r.cells[0].innerText === code);
+            if (!exists) addRow(tbody, code, c.name, c.price, c.q, c.nb, c.lock, true);
+        });
+
+        autoBalance();
+    }
+
+    function addRow(target, code, name, price, qty, isNB, isLocked, isCarry, isCustom = false, customIdx = null) {
+        const tr = document.createElement('tr');
+        tr.dataset.type = isNB ? 'nb' : 'b';
+        tr.dataset.code = code;
+        if(isCustom) { tr.dataset.custom = 'true'; tr.dataset.idx = customIdx; }
+
+        let nameHtml = `<div class="input-wrapper"><input class="box-input" value="${name}" oninput="searchLive(this.value, 'cell', this)" onfocus="searchLive(this.value, 'cell', this)">`;
+        
+        if (CONTRAST_REQUIRED_CODES.includes(code)) {
+            nameHtml += `<span class="badge badge-req">조영필요</span>`;
+        }
+        const upperName = name.toUpperCase();
+        if (CONTRAST_KEYWORDS.some(k => upperName.includes(k))) {
+            nameHtml += `<span class="badge badge-con">조영제</span>`;
+        }
+        nameHtml += `</div><div class="audit-msg" style="color:var(--accent); font-size:11px; font-weight:800; margin-top:2px;"></div>`;
+
+        const typeBtnHtml = `
+            <button class="type-btn ${isNB ? 'type-nb' : 'type-b'}" onclick="toggleType(this, '${code}', ${isCustom}, ${customIdx})">
+                ${isNB ? '비급여' : '급여'}
+            </button>
+        `;
+
+        tr.innerHTML = `
+            <td><div class="input-wrapper"><input class="box-input code-type" value="${code}" onchange="updateRowByCode(this, ${isCustom}, ${customIdx})" oninput="searchLive(this.value, 'cell', this)"></div></td>
+            <td>${nameHtml}</td>
+            <td align="right"><input class="box-input-num p-input" value="${fmt(price)}" oninput="syncRow(this, '${code}', ${isCustom}, ${customIdx})"></td>
+            <td align="center"><input class="box-input-num q-input" type="number" value="${qty}" step="0.1" oninput="syncRow(this, '${code}', ${isCustom}, ${customIdx})"></td>
+            <td align="center">${typeBtnHtml}</td>
+            <td align="center"><button class="carry-btn ${isCarry?'active':''}" onclick="toggleCarry(this, '${code}')">📌</button></td>
+            <td align="center"><button class="del-btn" onclick="deleteRow(this, '${code}', ${isCustom}, ${customIdx})">🗑️</button></td>
+        `;
+        target.appendChild(tr);
+    }
+
+    function updateRowByCode(input, isCustom, idx) {
+        const newCode = input.value.toUpperCase();
+        const tr = input.closest('tr');
+        
+        const found = flatDB.find(i => i.code === newCode);
+        
+        if (found) {
+            tr.querySelector('.box-input:not(.code-type)').value = found.name;
+            tr.querySelector('.p-input').value = fmt(found.price);
+            tr.dataset.code = newCode;
+            
+            if (isCustom && idx !== null) {
+                currentCustomItems[idx].code = newCode;
+                currentCustomItems[idx].name = found.name;
+                currentCustomItems[idx].price = found.price;
+            }
+        }
+        autoBalance();
+    }
+
+    function toggleType(btn, code, isCustom, idx) {
+        const tr = btn.closest('tr');
+        const isNowNB = btn.innerText === '급여'; 
+        
+        btn.innerText = isNowNB ? '비급여' : '급여';
+        btn.className = `type-btn ${isNowNB ? 'type-nb' : 'type-b'}`;
+        tr.dataset.type = isNowNB ? 'nb' : 'b';
+
+        if (carryOverItems.has(code)) carryOverItems.get(code).nb = isNowNB;
+        if (isCustom && idx !== null) currentCustomItems[idx].nb = isNowNB;
+        
+        autoBalance();
+    }
+
+    function deleteRow(btn, code, isCustom, idx) {
+        if (carryOverItems.has(code)) carryOverItems.delete(code);
+        if (isCustom && idx !== null) { currentCustomItems.splice(idx, 1); } 
+        else { deletedSetItems.add(code); }
+        renderItems(); 
+    }
+
+    function syncRow(el, code, isCustom, idx) {
+        const tr = el.closest('tr');
+        const p = clean(tr.querySelector('.p-input').value);
+        const q = parseFloat(tr.querySelector('.q-input').value) || 0;
+        if (carryOverItems.has(code)) { const c = carryOverItems.get(code); c.price = p; c.q = q; }
+        if (isCustom && idx !== null) { currentCustomItems[idx].price = p; currentCustomItems[idx].q = q; }
+        if (el.classList.contains('p-input')) el.value = fmt(p);
+        autoBalance();
+    }
+
+    function toggleCarry(btn, code) {
+        const tr = btn.closest('tr');
+        btn.classList.toggle('active');
+        const currentCode = tr.querySelector('.box-input.code-type').value; 
+        
+        if (btn.classList.contains('active')) {
+            carryOverItems.set(currentCode, { 
+                name: tr.querySelector('.box-input:not(.code-type)').value, 
+                price: clean(tr.querySelector('.p-input').value), 
+                q: parseFloat(tr.querySelector('.q-input').value) || 0, 
+                nb: tr.dataset.type === 'nb', 
+                lock: false
+            });
+        } else { carryOverItems.delete(code); } 
+    }
+
+    function calc() {
+        let bSum = 0, nbSum = 0, laSum = 0;
+        let hasContrast = false;
+        let needsContrastCode = null;
+
+        document.querySelectorAll('#itemList tr').forEach(tr => {
+            const name = tr.querySelector('.box-input:not(.code-type)').value.toUpperCase();
+            if (CONTRAST_KEYWORDS.some(k => name.includes(k))) hasContrast = true;
+        });
+
+        document.querySelectorAll('#itemList tr').forEach(tr => {
+            const code = tr.querySelector('.box-input.code-type').value.toUpperCase(); 
+            const name = tr.querySelector('.box-input:not(.code-type)').value;
+            const p = clean(tr.querySelector('.p-input').value);
+            const q = parseFloat(tr.querySelector('.q-input').value) || 0;
+            const msgBox = tr.querySelector('.audit-msg');
+            msgBox.innerText = ""; 
+
+            if (code.startsWith('LA')) {
+                laSum += q;
+                if (code === 'LA357' && q > 1.5) msgBox.innerText = "⚠️ LA357 1.5 초과";
+            }
+
+            if (CONTRAST_REQUIRED_CODES.includes(code) && !hasContrast) {
+                needsContrastCode = code;
+            }
+
+            if(tr.dataset.type === 'b') bSum += (p * q); else nbSum += (p * q);
+        });
+
+        const alertBox = document.getElementById('mainAlertBox');
+        let alerts = [];
+        if (laSum > 3.0) alerts.push("⚠️ 차단술 총 합계가 3.0을 초과했습니다. (삭감 주의)");
+        if (needsContrastCode) alerts.push("⚠️ 조영제가 누락되었습니다. (필수 시술 포함됨)");
+
+        if (alerts.length > 0) {
+            alertBox.innerHTML = alerts.join("<br>");
+            alertBox.style.display = "block";
+            if (laSum > 3.0) { alertBox.className = "alert-box alert-red"; } 
+            else { alertBox.className = "alert-box alert-orange"; }
+        } else {
+            alertBox.style.display = "none";
+        }
+
+        const bPay = Math.floor(Math.floor(bSum * 0.3) / 10) * 10;
+        return { totalFull: Math.floor(bSum + nbSum), bPay, nbSum: Math.floor(nbSum), finalPay: Math.floor((bPay + nbSum) / 10) * 10 };
+    }
+
+    function autoBalance() {
+        const target = clean(document.getElementById('tAmt').value);
+        const res = calc();
+        const rows = Array.from(document.querySelectorAll('#itemList tr'));
+        
+        let tRow = rows.find(r => r.dataset.type === 'nb' && STRATEGY_DRUGS.some(sd => r.querySelector('.box-input:not(.code-type)').value.includes(sd)));
+        
+        if (!tRow) {
+            const reversedRows = [...rows].reverse();
+            tRow = reversedRows.find(r => r.dataset.type === 'nb');
+        }
+
+        if (tRow) {
+            const adjName = tRow.querySelector('.box-input:not(.code-type)').value;
+            document.getElementById('matrixAdjustName').innerText = `[조정: ${adjName}]`;
+            let otherNb = 0;
+            rows.forEach(r => { if(r !== tRow && r.dataset.type === 'nb') otherNb += clean(r.querySelector('.p-input').value) * (parseFloat(r.querySelector('.q-input').value) || 0); });
+            const pAdj = clean(tRow.querySelector('.p-input').value);
+            
+            if(pAdj > 0) {
+                tRow.querySelector('.q-input').value = ((target - res.bPay - otherNb) / pAdj).toFixed(4);
+                
+                let mHTML = '';
+                const baseThousand = target % 10000;
+                const startPrice = Math.max(0, Math.floor(target/10000)*10000 - 50000);
+                const endPrice = Math.floor(target/10000)*10000 + 20000;
+
+                for(let i = startPrice; i <= endPrice; i += 10000) {
+                    const pt = i + baseThousand;
+                    const qP = ((pt - res.bPay - otherNb) / pAdj).toFixed(4);
+                    if(qP >= 0) {
+                        const bgStyle = (pt === target) ? "background:#eef6ff; border-color:var(--blue);" : "";
+                        mHTML += `<div class="matrix-row" onclick="setTarget(${pt})" style="${bgStyle}"><span class="matrix-target">${fmt(pt)}원</span><span class="matrix-val">${qP} ea</span></div>`;
+                    }
+                }
+                document.getElementById('matrixTable').innerHTML = mHTML;
+            }
+        }
+        const f = calc();
+        document.getElementById('totalFull').innerText = fmt(f.totalFull);
+        document.getElementById('summaryBenefit').innerText = fmt(f.bPay);
+        document.getElementById('summaryNonBenefit').innerText = fmt(f.nbSum);
+        document.getElementById('finalPay').innerText = fmt(f.finalPay);
+    }
+    window.onload = init;
+</script>
+</body>
+</html>
