@@ -299,6 +299,12 @@
     const RAW_BASE = `https://raw.githubusercontent.com/${GITHUB_OWNER}/${GITHUB_REPO}/${GITHUB_BRANCH}/`;
     const API_BASE = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/`;
 
+    // [추가] 기본 세트 DB (항상 로드) + 선택 세트(set*.json) 병합(B안)
+    const BASE_SET_FILE = "set_databaset.json";
+    let BASE_SETS = {};
+    let SET_SOURCES = {};   // code -> source file name ("set_databaset.json" or selected set*.json)
+    let SET_LABEL_CACHE = {}; // code -> label cache
+
     const unwrapData = (obj) => (obj && typeof obj === 'object' && obj.data && typeof obj.data === 'object') ? obj.data : obj;
 
     async function fetchJsonFromGithub(fileName) {
@@ -306,6 +312,67 @@
         if (!res.ok) throw new Error("fetch 실패: " + fileName);
         return await res.json();
     }
+
+    function escapeHtml(s) {
+        return String(s ?? "").replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+    }
+
+    function applyOverridesToDB(overridesObj) {
+        // overridesObj: { fee?: {CODE:[name,price,...]}, drug?: {...}, mat?: {...} }
+        if (!overridesObj || typeof overridesObj !== 'object') return;
+        const cats = ['fee','drug','mat'];
+        cats.forEach(cat => {
+            const src = overridesObj[cat];
+            if (!src || typeof src !== 'object') return;
+            if (!DB[cat] || typeof DB[cat] !== 'object') DB[cat] = {};
+            Object.keys(src).forEach(codeRaw => {
+                const code = String(codeRaw).toUpperCase();
+                const v = src[codeRaw];
+                if (Array.isArray(v) && v.length >= 2) {
+                    DB[cat][code] = [String(v[0] ?? code), Number(v[1] ?? 0)];
+                } else if (v && typeof v === 'object' && Array.isArray(v.data) && v.data.length >= 2) {
+                    DB[cat][code] = [String(v.data[0] ?? code), Number(v.data[1] ?? 0)];
+                }
+            });
+        });
+        // 캐시 무효화
+        SET_LABEL_CACHE = {};
+    }
+
+    async function loadBaseSets() {
+        // BASE_SET_FILE은 항상 로드(있으면), 실패해도 앱은 계속 동작
+        try {
+            const raw = await fetchJsonFromGithub(BASE_SET_FILE);
+            // set_databaset.json은 {meta, overrides, data} 형태를 지원
+            if (raw && raw.overrides) applyOverridesToDB(raw.overrides);
+
+            const sets = unwrapData(raw); // data가 있으면 data를 반환
+            BASE_SETS = (sets && typeof sets === 'object') ? sets : {};
+            // 소스맵 초기화
+            SET_SOURCES = {};
+            Object.keys(BASE_SETS).forEach(k => { SET_SOURCES[k] = BASE_SET_FILE; });
+        } catch (e) {
+            console.warn("기본 세트 로드 실패:", e);
+            BASE_SETS = {};
+            SET_SOURCES = {};
+        }
+        // 기본은 BASE_SETS만 적용
+        DB.sets = { ...(BASE_SETS || {}) };
+    }
+
+    function mergeSets(extraSets, extraSourceName) {
+        const base = BASE_SETS && typeof BASE_SETS === 'object' ? BASE_SETS : {};
+        const extra = extraSets && typeof extraSets === 'object' ? extraSets : {};
+        const merged = { ...base, ...extra };
+        // 소스맵 다시 구성
+        const sources = {};
+        Object.keys(base).forEach(k => { sources[k] = BASE_SET_FILE; });
+        Object.keys(extra).forEach(k => { sources[k] = extraSourceName || "extra"; });
+        SET_SOURCES = sources;
+        SET_LABEL_CACHE = {};
+        DB.sets = merged;
+    }
+
 
     async function listSetFiles() {
         // 레포 루트에서 set*.json 자동 탐색
@@ -323,29 +390,245 @@
         }
     }
 
+    
     function refreshSetCodes() {
         const sel = document.getElementById('setSel');
         if (!sel) return;
-        if (!DB.sets || Object.keys(DB.sets).length === 0) {
+
+        const keys = (DB && DB.sets && typeof DB.sets === 'object') ? Object.keys(DB.sets) : [];
+        if (keys.length === 0) {
             sel.innerHTML = '<option value="">-- 처방 코드를 선택하세요 --</option>';
             return;
         }
-        sel.innerHTML = '<option value="">-- 처방 코드를 선택하세요 --</option>' + 
-            Object.keys(DB.sets).sort().map(k => `<option value="${k}">[${k}] ${DB.sets[k].n}</option>`).join('');
+
+        const options = keys.sort().map(code => {
+            const setObj = DB.sets[code];
+            const src = (SET_SOURCES && SET_SOURCES[code]) ? SET_SOURCES[code] : "";
+            const cacheKey = `${code}::${src}`;
+            let label = SET_LABEL_CACHE[cacheKey];
+            if (!label) {
+                label = buildSetOptionLabel(code, setObj, src);
+                SET_LABEL_CACHE[cacheKey] = label;
+            }
+            return `<option value="${escapeHtml(code)}">${escapeHtml(label)}</option>`;
+        }).join('');
+
+        sel.innerHTML = '<option value="">-- 처방 코드를 선택하세요 --</option>' + options;
     }
+
+    function estimateFinalPayForSet(setObj, consultMode = "follow") {
+        try {
+            // setObj: {it:[{c,n,q,nb}], dg, cc}
+            const set = normalizeSet({
+                ...(setObj || {}),
+                it: Array.isArray(setObj?.it) ? setObj.it.map(x => ({...x})) : [],
+                dg: Array.isArray(setObj?.dg) ? [...setObj.dg] : [],
+                cc: Array.isArray(setObj?.cc) ? [...setObj.cc] : []
+            });
+
+            let bSum = 0, nbSum = 0;
+
+            // consult
+            const consultPrice = (consultMode === "first") ? (CONSULT_PRICES.first || 0)
+                                : (consultMode === "follow") ? (CONSULT_PRICES.follow || 0)
+                                : 0;
+            if (consultPrice > 0) bSum += consultPrice;
+
+            const items = Array.isArray(set.it) ? set.it : [];
+            items.forEach(item => {
+                const code = String(item.c || "").toUpperCase();
+                const fallbackName = (item.n || code);
+                const info = (DB.fee && DB.fee[code]) || (DB.drug && DB.drug[code]) || (DB.mat && DB.mat[code]) || null;
+                const name = info ? info[0] : fallbackName;
+                let price = info ? Number(info[1] || 0) : 0;
+
+                // renderItems와 동일: 전략 비급여 약제(리포라제 등)는 100000으로 취급
+                if (STRATEGY_DRUGS.some(sd => String(name || "").includes(sd))) price = 100000;
+
+                const q = parseFloat(item.q) || 0;
+                const isNB = !!item.nb || code.includes('SONO') || code.includes('C-ARM');
+                if (isNB) nbSum += price * q;
+                else bSum += price * q;
+            });
+
+            const bPay = Math.floor(Math.floor(bSum * 0.3) / 10) * 10;
+            const finalPay = Math.floor((bPay + nbSum) / 10) * 10;
+            return Math.floor(finalPay);
+        } catch (e) {
+            return 0;
+        }
+    }
+
+    function inferRegionTag(setObj) {
+        const set = setObj || {};
+        const name = String(set.n || "");
+        const ccLines = Array.isArray(set.cc) ? set.cc : [];
+
+        // 1) [부위] 형태 우선
+        const bracketFrom = (s) => {
+            const m = String(s || "").match(/^\[([^\]]+)\]/);
+            return m ? m[1].trim() : "";
+        };
+        for (const l of ccLines) {
+            const b = bracketFrom(l);
+            if (b) return b;
+        }
+        const b2 = bracketFrom(name);
+        if (b2) return b2;
+
+        const blob = (name + "\n" + ccLines.join("\n")).toLowerCase();
+
+        // 2) Spine (우선)
+        const hasC = /c[\s\-]?\d/.test(blob) || blob.includes("c-spine") || blob.includes("cervical") || blob.includes("경추") || blob.includes("목");
+        const hasT = /t[\s\-]?\d/.test(blob) || blob.includes("t-spine") || blob.includes("thoracic") || blob.includes("흉추") || blob.includes("등");
+        const hasL = /l[\s\-]?\d/.test(blob) || blob.includes("l-spine") || blob.includes("lumbar") || blob.includes("요추") || blob.includes("허리");
+
+        if (hasC) return "목";
+        if (hasT) return "흉추";
+        if (hasL) return "허리";
+
+        // 3) Peripheral / joints (키워드)
+        const rules = [
+            ["어깨", ["어깨","견관절","견갑","rotator","shoulder"]],
+            ["팔꿈치", ["팔꿈치","주관절","elbow"]],
+            ["손목", ["손목","완관절","wrist"]],
+            ["손", ["손","수지","finger","hand","digital"]],
+            ["고관절", ["고관절","hip"]],
+            ["무릎", ["무릎","슬관절","knee"]],
+            ["발목", ["발목","족관절","ankle"]],
+            ["발", ["발","족부","foot"]],
+            ["대퇴", ["대퇴","thigh"]],
+            ["하퇴", ["하퇴","종아리","calf","leg"]],
+        ];
+
+        for (const [tag, kws] of rules) {
+            if (kws.some(k => blob.includes(String(k).toLowerCase()))) return tag;
+        }
+
+        return "";
+    }
+
+    function summarizeBlocks(setObj, regionTag) {
+        const set = normalizeSet({
+            ...(setObj || {}),
+            it: Array.isArray(setObj?.it) ? setObj.it.map(x => ({...x})) : [],
+            dg: Array.isArray(setObj?.dg) ? [...setObj.dg] : [],
+            cc: Array.isArray(setObj?.cc) ? [...setObj.cc] : []
+        });
+
+        const items = Array.isArray(set.it) ? set.it : [];
+        const agg = {}; // abbr -> qty
+
+        const add = (abbr, q) => {
+            if (!abbr) return;
+            const v = parseFloat(q) || 0;
+            if (!v) return;
+            agg[abbr] = (agg[abbr] || 0) + v;
+        };
+
+        items.forEach(it => {
+            const code = String(it.c || "").toUpperCase();
+            const info = (DB.fee && DB.fee[code]) || (DB.drug && DB.drug[code]) || (DB.mat && DB.mat[code]) || null;
+            const name = String((info ? info[0] : (it.n || "")) || "").toLowerCase();
+
+            // central / spine
+            if (name.includes("후지내측지") || name.includes("내측지차단")) {
+                const tag = regionTag || inferRegionTag(setObj);
+                const mbb = (tag === "목") ? "CMBB" : (tag === "흉추") ? "TMBB" : "LMBB";
+                add(mbb, it.q);
+                return;
+            }
+            if (name.includes("선택적") && name.includes("신경근")) { add("SNRB", it.q); return; }
+            if (name.includes("추간관절") || name.includes("후관절")) { add("FJB", it.q); return; }
+
+            // peripheral / others
+            if (name.includes("척수신경후지")) { add("PDNB", it.q); return; }
+            if (name.includes("견갑신경")) { add("SSNB", it.q); return; }
+            if (name.includes("대퇴신경")) { add("FNB", it.q); return; }
+            if (name.includes("외측대퇴피")) { add("LFCNB", it.q); return; }
+            if (name.includes("요천골") && name.includes("신경총")) { add("PCB", it.q); return; }
+            if (name.includes("좌골신경")) { add("SCNB", it.q); return; }
+            if (name.includes("액와하부")) { add("APNB", it.q); return; }
+            if (name.includes("액와신경")) { add("ANB", it.q); return; }
+        });
+
+        const order = ["CMBB","TMBB","LMBB","SNRB","FJB","PDNB","SSNB","ANB","APNB","FNB","LFCNB","PCB","SCNB"];
+        const parts = [];
+        order.forEach(k => {
+            if (!agg[k]) return;
+            const q = agg[k];
+            const qStr = (Math.abs(q - Math.round(q)) < 1e-6) ? String(Math.round(q)) : String(parseFloat(q.toFixed(4))).replace(/0+$/,'').replace(/\.$/,'');
+            parts.push(`${k}${qStr}`);
+        });
+        return parts;
+    }
+
+    function buildSetOptionLabel(code, setObj, src) {
+        const set = setObj || {};
+        const name = String(set.n || "");
+
+        const isBase = (src && String(src).toLowerCase() === String(BASE_SET_FILE).toLowerCase());
+
+        // 기본 DB: [부위] 금액(원) + 차단술요약
+        if (isBase) {
+            const region = inferRegionTag(set);
+            const pay = estimateFinalPayForSet(set, "follow");
+            const blocks = summarizeBlocks(set, region);
+
+            const parts = [];
+            if (region) parts.push(`[${region}]`);
+            if (pay > 0) parts.push(`${fmt(pay)}원`);
+
+            if (blocks.length > 0) parts.push(blocks.join(' + '));
+
+            // 최소한 name은 유지(블록이 없어도)
+            if (parts.length === 0) return name ? name : `[${code}]`;
+            if (blocks.length === 0 && name) parts.push(name);
+
+            return parts.join(' ');
+        }
+
+        // 병원 세트(js/us/bang 등): 원본명칭 100% 유지(금액/가공 없음)
+        return `[${code}] ${name}`.trim();
+    }
+
 
     // set 파일 선택/로드
     let CURRENT_SET_FILE = "";
     async function changeSetFile() {
         const sel = document.getElementById('setFileSel');
-        const file = sel ? sel.value : "";
-        if (!file) return;
+        const fileRaw = sel ? sel.value : "";
+        const file = String(fileRaw || "").trim();
+
+        // 기본(BASE)만 사용
+        const applyBaseOnly = () => {
+            mergeSets({}, ""); // DB.sets = BASE
+            CURRENT_SET_FILE = "";
+            refreshSetCodes();
+            document.getElementById('setSel').value = "";
+            document.getElementById('dataView').style.display = 'none';
+
+            currentCustomItems = [];
+            deletedSetItems.clear();
+            document.getElementById('ccSwitch').checked = true;
+            document.getElementById('ccContent').style.display = 'block';
+            document.getElementById('setFileStatus').innerText = (Object.keys(BASE_SETS || {}).length > 0) ? BASE_SET_FILE : "-";
+        };
+
+        if (!file || file.toLowerCase() === BASE_SET_FILE.toLowerCase()) {
+            applyBaseOnly();
+            return;
+        }
 
         try {
             document.getElementById('setFileStatus').innerText = "로딩...";
             const raw = await fetchJsonFromGithub(file);
-            const sets = unwrapData(raw);
-            DB.sets = sets && typeof sets === 'object' ? sets : {};
+
+            // 선택 set 파일에도 overrides가 있으면 반영(선택사항)
+            if (raw && raw.overrides) applyOverridesToDB(raw.overrides);
+
+            const extraSets = unwrapData(raw);
+            mergeSets(extraSets && typeof extraSets === 'object' ? extraSets : {}, file);
             CURRENT_SET_FILE = file;
 
             // 세트 코드 목록 갱신
@@ -364,10 +647,10 @@
         } catch(e) {
             console.error("set 파일 로드 실패:", e);
             document.getElementById('setFileStatus').innerText = "로드 실패";
-            DB.sets = {};
-            refreshSetCodes();
+            // 실패 시에도 기본(BASE)은 유지
+            applyBaseOnly();
         }
-    }
+}
 
     // [핵심] poket(포켓) 자동 분리: it 안에 섞인 PLAN/메모/증상/상병을 cc/dg로 정리
     function dbHasCode(codeUpper) {
@@ -519,25 +802,38 @@
             document.getElementById('st-db').innerText = fmt(flatDB.length) + "건";
 
             // 세트코드 드롭다운 초기화
+            await loadBaseSets();
             refreshSetCodes();
-
             // set*.json 파일 드롭다운 준비
             const files = await listSetFiles();
             const setSel = document.getElementById('setFileSel');
             if (setSel) {
-                if (files.length === 0) {
-                    setSel.innerHTML = '<option value="">set*.json 없음</option>';
-                    document.getElementById('setFileStatus').innerText = "-";
-                } else if (files.length === 1) {
-                    setSel.innerHTML = `<option value="${files[0]}">${files[0]}</option>`;
-                    setSel.value = files[0];
-                    await changeSetFile(); // 1개면 자동 적용
+                // B안: 기본 세트(BASE_SET_FILE)는 이미 로드되어 있음. 여기서는 "추가 세트 파일"만 선택하게 함.
+                const allFiles = Array.isArray(files) ? files : [];
+                const uniq = Array.from(new Set(allFiles))
+                    .filter(f => f && /^set.*\.json$/i.test(f))
+                    .sort((a,b) => a.localeCompare(b));
+
+                // 드롭다운 구성: 기본은 "-"(추가 세트 없음)
+                let htmlOpt = '<option value="">-</option>';
+                // 기본 파일도 선택 가능(선택해도 결과는 동일: BASE만 사용)
+                if (!uniq.includes(BASE_SET_FILE)) {
+                    htmlOpt += `<option value="${BASE_SET_FILE}">${BASE_SET_FILE} (기본)</option>`;
                 } else {
-                    setSel.innerHTML = '<option value="">선택...</option>' + files.map(f => `<option value="${f}">${f}</option>`).join('');
-                    // 여러 개면 자동선택하지 않고 사용자 선택(원하면 첫번째 자동으로 바꾸려면 여기 수정)
-                    document.getElementById('setFileStatus').innerText = "-";
+                    // 목록에 있으면 맨 위에 기본 표시를 추가로 넣어줌
+                    htmlOpt += `<option value="${BASE_SET_FILE}">${BASE_SET_FILE} (기본)</option>`;
                 }
-            }
+
+                uniq.forEach(f => {
+                    if (String(f).toLowerCase() === String(BASE_SET_FILE).toLowerCase()) return;
+                    htmlOpt += `<option value="${f}">${f}</option>`;
+                });
+
+                setSel.innerHTML = htmlOpt;
+                setSel.value = ""; // 기본(추가 세트 없음)
+                // 상태표시: 기본 파일 로드 여부
+                document.getElementById('setFileStatus').innerText = (Object.keys(BASE_SETS || {}).length > 0) ? BASE_SET_FILE : "-";
+}
         } catch(e) {
             console.error("DB 로드 실패", e);
         }
