@@ -156,8 +156,12 @@
 
         footer { width: 100%; text-align: center; padding: 50px 0; font-size: 12px; color: #888; background: transparent; font-weight: 600; }
     
-        .inj-only-toggle{display:flex;align-items:center;gap:6px;padding:6px 10px;border:2px solid rgba(0,0,0,0.15);border-radius:10px;background:rgba(255,255,255,0.35);cursor:pointer;font-weight:900;font-size:12px;user-select:none;}
+        .inj-only-toggle{display:flex;align-items:center;gap:6px;padding:6px 10px;border:2px solid rgba(0,0,0,0.15);border-radius:10px;background:rgba(255,255,255,0.35);cursor:pointer;font-weight:900;font-size:12px;user-select:none;white-space:nowrap;min-width:74px;}
         .inj-only-toggle input{accent-color: var(--blue); width:14px; height:14px;}
+
+/* 안정적인 레이아웃(옵션 길이에 영향받지 않도록) */
+.select-line select, .select-line input {min-width:0;}
+.inj-only-toggle{flex:0 0 auto;}
 </style>
 </head>
 <body onclick="closeSearch(event)">
@@ -333,7 +337,7 @@
     // ===== [추가] 처방세트 파일 표시명/세트 라벨/필터/정렬 =====
     let INJ_ONLY = false;
     let SET_META = {};   // {key:{label, search, part, sortKey, isInj, blocksLabel, tier}}
-    const PART_ORDER = ["목","흉추","허리","어깨","팔꿈치","손목/손","골반/고관절","무릎","대퇴","발목/발","기타"];
+    const PART_ORDER = ["경추","흉추","요추","어깨","팔꿈치","손목/손","골반/고관절","대퇴/무릎","발목/발","기타"];
 
     function setFileDisplayName(fileName){
         const f = (fileName||"").toString();
@@ -391,12 +395,22 @@
     function inferSpineRegion(setObj){
         const cc = (setObj && setObj.cc) ? setObj.cc.join(" ") : "";
         const nAll = ((setObj && setObj.it) ? setObj.it.map(x=>String(x.n||"")).join(" ") : "");
-        const s = (cc + " " + nAll).toUpperCase();
+        let s = (cc + " " + nAll).toUpperCase();
+
+        // K-L grade(무릎 OA 등)처럼 'K-L 2~3' 표기는 요추(L)로 오인되기 쉬워 제거
+        s = s.replace(/K\s*-\s*L\s*\d\s*(?:~|\-|TO)?\s*\d?/gi, " ");
+        s = s.replace(/K\s*-\s*L/gi, " ");
 
         // 명시적 C/T/L
         if (/\bC[\-\s]?\d/.test(s) || /CERV/i.test(s) || /경추|목/.test(s)) return "C";
         if (/\bT[\-\s]?\d/.test(s) || /THOR/i.test(s) || /흉추|흉/.test(s)) return "T";
         if (/\bL[\-\s]?\d/.test(s) || /LUMB/i.test(s) || /요추|허리/.test(s)) return "L";
+
+        // 기타 힌트
+        if (/(EPI\b|EPIDURO)/i.test(s) && /CERV/i.test(s)) return "C";
+        if (/(EPI\b|EPIDURO)/i.test(s) && /THOR/i.test(s)) return "T";
+        if (/(EPI\b|EPIDURO)/i.test(s) && /LUMB/i.test(s)) return "L";
+
         return "";
     }
 
@@ -405,17 +419,24 @@
         const nAll = ((setObj && setObj.it) ? setObj.it.map(x=>String(x.n||"")).join(" ") : "");
         const s = (cc + " " + nAll);
 
+        // 경신경총(목) - SCPB/CPB/SFCP 등
+        if (/SCPB|\bCPB\b|SFCP|경신경총|CERVICAL\s*PLEX/i.test(s)) return "경추";
+
         // 어깨/상완
-        if (/어깨|견관절|회전근|견봉|견갑|SSNB|견갑신경|액와신경|ANB/i.test(s)) return "어깨";
-        if (/팔꿈치|주관절/i.test(s)) return "팔꿈치";
-        if (/손목|수근|손가락|손\s*저림|hand|wrist|APNB|DIGITAL/i.test(s)) return "손목/손";
+        if (/어깨|견관절|회전근|견봉|견갑|SSNB|견갑신경|액와신경|\bANB\b/i.test(s)) return "어깨";
+        if (/팔꿈치|주관절|elbow/i.test(s)) return "팔꿈치";
+        if (/손목|수근|손가락|손\s*저림|hand|wrist|\bAPNB\b|DIGITAL|MEDIAN|ULNAR|RADIAL/i.test(s)) return "손목/손";
 
-        if (/고관절|hip|천장관절|sij|골반/i.test(s)) return "골반/고관절";
-        if (/무릎|슬관절|knee/i.test(s)) return "무릎";
-        if (/대퇴|허벅지|FNB|대퇴신경|LFCNB|외측대퇴피/i.test(s)) return "대퇴";
-        if (/발목|족관절|발가락|foot|ankle|하퇴|종아리|sural/i.test(s)) return "발목/발";
+        // 골반/고관절
+        if (/고관절|hip|천장관절|\bSIJ\b|골반/i.test(s)) return "골반/고관절";
 
-        return "";
+        // 대퇴/무릎 (FNB/LFCNB/SCNB 포함)
+        if (/무릎|슬관절|knee|대퇴|허벅지|\bFNB\b|대퇴신경|\bLFCNB\b|외측대퇴피|\bSCNB\b|좌골신경/i.test(s)) return "대퇴/무릎";
+
+        // 발목/발 (하퇴 포함)
+        if (/발목|족관절|ankle|발\b|foot|하퇴|종아리|\bSNB\b|SUR/i.test(s)) return "발목/발";
+
+        return "기타";
     }
 
     function isInjectionSet(setObj){
@@ -479,19 +500,28 @@
             for (const v of cand){
                 if (v==null) continue;
                 const n = parseFloat(v);
-                if (!isNaN(n) && n>0 && n<100) return Math.round(n*10)/10;
+                if (!isNaN(n) && n>=1 && n<100) return Math.round(n*10)/10;
             }
-            const name = String(setObj.n||"");
-            // 7.9 / 9.8
-            let m = name.match(/(\d{1,2}\.\d)/);
-            if (m) return Math.round(parseFloat(m[1])*10)/10;
-            // 79,000원 / 79000
-            m = name.replace(/,/g,"").match(/(\d{4,6})\s*원?/);
-            if (m){
-                const won = parseFloat(m[1]);
-                if (!isNaN(won) && won>=10000) return Math.round((won/10000)*10)/10;
+            // name에서 tier 추출: "+0.211.003" 같은 내부코드(0.x 계열)는 제외
+            let name = String(setObj.n||"");
+            name = name.replace(/\+\s*0\.\d{3}\.\d{3}/g, " ");
+            name = name.replace(/0\.\d{3}\.\d{3}/g, " ");
+
+            // 7.9 / 9.8 같은 '만원단위' 표기 우선
+            const floats = name.match(/\b\d{1,2}\.\d\b/g) || [];
+            for (const f of floats){
+                const n = parseFloat(f);
+                if (!isNaN(n) && n>=1 && n<100) return Math.round(n*10)/10;
+            }
+
+            // "80,550원" 같은 원화 표기
+            const m2 = name.match(/(\d{1,3}(?:,\d{3})+)\s*원/);
+            if (m2){
+                const won = parseInt(m2[1].replace(/,/g,''),10);
+                if (!isNaN(won) && won>0) return Math.round((won/10000)*10)/10;
             }
         }
+        // fallback: 계산된 본인부담금(만원 단위)
         if (finalPay && finalPay>0){
             return Math.round((finalPay/10000)*10)/10;
         }
@@ -549,11 +579,36 @@
             const mainTag = detectMainTag(setObj);
 
             // 부위 결정: central(척추) 힌트가 있으면 spine, 아니면 말초
-            let part = "";
-            if (spinePrefix){
-                part = (spinePrefix==="C") ? "목" : (spinePrefix==="T") ? "흉추" : "허리";
+            let part = "기타";
+
+            // 부위 판정:
+            //  - central block(MBB/SNRB/FJB/EPI 등)이 있으면 경추/흉추/요추 우선
+            //  - peripheral block만 있으면 peripheral 부위 사용
+            //  - PDNB는 보조성격(단독일 때만 spine 힌트)
+            const centralQty = (
+                sumBlockQty(setObj, [/후지내측지/i, /\bMBB\b/i]) +
+                sumBlockQty(setObj, [/선택근신경근/i, /\bSNRB\b/i]) +
+                sumBlockQty(setObj, [/추간관절/i, /\bFJB\b/i]) +
+                sumBlockQty(setObj, [/경막외|EPIDURO|\bEPI\b/i])
+            );
+            const pdnbQty = sumBlockQty(setObj, [/척수신경후지/i, /\bPDNB\b/i]);
+
+            const perPart = inferPeripheralPart(setObj);
+            const spine = inferSpineRegion(setObj); // C/T/L or ""
+            const spineToKo = (sp)=> (sp==="C"?"경추":(sp==="T"?"흉추":(sp==="L"?"요추":"")));
+
+            if (isInj){
+                if (centralQty > 0){
+                    part = spineToKo(spine) || "요추";
+                } else if (perPart && perPart !== "기타"){
+                    part = perPart;
+                } else if (pdnbQty > 0){
+                    part = spineToKo(spine) || "요추";
+                } else {
+                    part = perPart || "기타";
+                }
             } else {
-                part = inferPeripheralPart(setObj) || "기타";
+                part = perPart || "기타";
             }
 
             const blocks = buildBlocksLabel(setObj, spinePrefix);
@@ -562,17 +617,18 @@
 
             // 라벨 구성(기본: [코드] 원본명 유지, 단 database는 가공)
             let label = `[${key}] ${setObj.n || ""}`;
+            label = label.replace(/\+\s*0\.\d{3}\.\d{3}/g,"").replace(/\s{2,}/g," ").trim();
 
             // database 성격의 파일(set_databaset 선택 시)에서는 최대한 가공 라벨 사용
             const fLower = (CURRENT_SET_FILE || "").toLowerCase();
             const isDatabase = (fLower === "set_databaset.json" || fLower === "신경차단술 조합.json");
             if (isDatabase){
-                const pieces = [];
-                if (tier!=null) pieces.push(tier.toFixed(1));
-                if (mainTag) pieces.push(mainTag);
-                blocks.forEach(b=>pieces.push(b));
-                const right = pieces.join(" + ");
-                label = `[${part}] ${right}`.trim();
+                const rightParts = [];
+                if (mainTag) rightParts.push(mainTag);
+                blocks.forEach(b=>rightParts.push(b));
+                const right = rightParts.join(" + ");
+                const tierTxt = (tier!=null) ? tier.toFixed(1) : "";
+                label = `[${part}] ${tierTxt}${right?(" " + right):""}`.trim();
             }
 
             const orderIdx = PART_ORDER.indexOf(part);
