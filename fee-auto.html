@@ -155,7 +155,10 @@
         .alert-orange { background: rgba(255, 248, 230, 0.7); color: #b7791f; border-color: #b7791f; }
 
         footer { width: 100%; text-align: center; padding: 50px 0; font-size: 12px; color: #888; background: transparent; font-weight: 600; }
-    </style>
+    
+        .inj-only-toggle{display:flex;align-items:center;gap:6px;padding:6px 10px;border:2px solid rgba(0,0,0,0.15);border-radius:10px;background:rgba(255,255,255,0.35);cursor:pointer;font-weight:900;font-size:12px;user-select:none;}
+        .inj-only-toggle input{accent-color: var(--blue); width:14px; height:14px;}
+</style>
 </head>
 <body onclick="closeSearch(event)">
 
@@ -190,6 +193,9 @@
             <div class="set-selector-group">
                 <select id="setSel" onchange="changeSet()"></select>
                 <input type="text" id="setSearchInput" placeholder="🔍 세트 검색" oninput="searchSets(this.value, this)" onkeydown="if(event.key==='Escape') clearSearch()">
+                <label class="inj-only-toggle" title="차단술/수팽/관절조영 등 주사 세트만 표시">
+                    <input type="checkbox" id="injOnlyToggle" onchange="toggleInjectionOnly()"> 주사만
+                </label>
             </div>
             
             <div id="dataView" style="display:none; margin-top:30px;">
@@ -258,7 +264,7 @@
                 <div id="finalPay">0</div>
             </div>
 
-            <div class="section-title" style="margin-top:40px; border-left-color: var(--blue);">금액별 조정 (Matrix)</div>
+            <div class="section-title" style="margin-top:40px; border-left-color: var(--blue);">금액별 수량 조정</div>
             <div id="matrixAdjustName" style="font-size:11px; color:var(--blue); font-weight:800; margin-bottom:10px; text-align:right;">-</div>
             <div id="matrixTable" class="matrix-container"></div>
         </div>
@@ -299,12 +305,6 @@
     const RAW_BASE = `https://raw.githubusercontent.com/${GITHUB_OWNER}/${GITHUB_REPO}/${GITHUB_BRANCH}/`;
     const API_BASE = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/`;
 
-    // [추가] 기본 세트 DB (항상 로드) + 선택 세트(set*.json) 병합(B안)
-    const BASE_SET_FILE = "set_databaset.json";
-    let BASE_SETS = {};
-    let SET_SOURCES = {};   // code -> source file name ("set_databaset.json" or selected set*.json)
-    let SET_LABEL_CACHE = {}; // code -> label cache
-
     const unwrapData = (obj) => (obj && typeof obj === 'object' && obj.data && typeof obj.data === 'object') ? obj.data : obj;
 
     async function fetchJsonFromGithub(fileName) {
@@ -312,67 +312,6 @@
         if (!res.ok) throw new Error("fetch 실패: " + fileName);
         return await res.json();
     }
-
-    function escapeHtml(s) {
-        return String(s ?? "").replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
-    }
-
-    function applyOverridesToDB(overridesObj) {
-        // overridesObj: { fee?: {CODE:[name,price,...]}, drug?: {...}, mat?: {...} }
-        if (!overridesObj || typeof overridesObj !== 'object') return;
-        const cats = ['fee','drug','mat'];
-        cats.forEach(cat => {
-            const src = overridesObj[cat];
-            if (!src || typeof src !== 'object') return;
-            if (!DB[cat] || typeof DB[cat] !== 'object') DB[cat] = {};
-            Object.keys(src).forEach(codeRaw => {
-                const code = String(codeRaw).toUpperCase();
-                const v = src[codeRaw];
-                if (Array.isArray(v) && v.length >= 2) {
-                    DB[cat][code] = [String(v[0] ?? code), Number(v[1] ?? 0)];
-                } else if (v && typeof v === 'object' && Array.isArray(v.data) && v.data.length >= 2) {
-                    DB[cat][code] = [String(v.data[0] ?? code), Number(v.data[1] ?? 0)];
-                }
-            });
-        });
-        // 캐시 무효화
-        SET_LABEL_CACHE = {};
-    }
-
-    async function loadBaseSets() {
-        // BASE_SET_FILE은 항상 로드(있으면), 실패해도 앱은 계속 동작
-        try {
-            const raw = await fetchJsonFromGithub(BASE_SET_FILE);
-            // set_databaset.json은 {meta, overrides, data} 형태를 지원
-            if (raw && raw.overrides) applyOverridesToDB(raw.overrides);
-
-            const sets = unwrapData(raw); // data가 있으면 data를 반환
-            BASE_SETS = (sets && typeof sets === 'object') ? sets : {};
-            // 소스맵 초기화
-            SET_SOURCES = {};
-            Object.keys(BASE_SETS).forEach(k => { SET_SOURCES[k] = BASE_SET_FILE; });
-        } catch (e) {
-            console.warn("기본 세트 로드 실패:", e);
-            BASE_SETS = {};
-            SET_SOURCES = {};
-        }
-        // 기본은 BASE_SETS만 적용
-        DB.sets = { ...(BASE_SETS || {}) };
-    }
-
-    function mergeSets(extraSets, extraSourceName) {
-        const base = BASE_SETS && typeof BASE_SETS === 'object' ? BASE_SETS : {};
-        const extra = extraSets && typeof extraSets === 'object' ? extraSets : {};
-        const merged = { ...base, ...extra };
-        // 소스맵 다시 구성
-        const sources = {};
-        Object.keys(base).forEach(k => { sources[k] = BASE_SET_FILE; });
-        Object.keys(extra).forEach(k => { sources[k] = extraSourceName || "extra"; });
-        SET_SOURCES = sources;
-        SET_LABEL_CACHE = {};
-        DB.sets = merged;
-    }
-
 
     async function listSetFiles() {
         // 레포 루트에서 set*.json 자동 탐색
@@ -391,249 +330,341 @@
     }
 
     
-    function refreshSetCodes() {
-        const sel = document.getElementById('setSel');
-        if (!sel) return;
+    // ===== [추가] 처방세트 파일 표시명/세트 라벨/필터/정렬 =====
+    let INJ_ONLY = false;
+    let SET_META = {};   // {key:{label, search, part, sortKey, isInj, blocksLabel, tier}}
+    const PART_ORDER = ["목","흉추","허리","어깨","팔꿈치","손목/손","골반/고관절","무릎","대퇴","발목/발","기타"];
 
-        const keys = (DB && DB.sets && typeof DB.sets === 'object') ? Object.keys(DB.sets) : [];
-        if (keys.length === 0) {
-            sel.innerHTML = '<option value="">-- 처방 코드를 선택하세요 --</option>';
-            return;
-        }
-
-        const options = keys.sort().map(code => {
-            const setObj = DB.sets[code];
-            const src = (SET_SOURCES && SET_SOURCES[code]) ? SET_SOURCES[code] : "";
-            const cacheKey = `${code}::${src}`;
-            let label = SET_LABEL_CACHE[cacheKey];
-            if (!label) {
-                label = buildSetOptionLabel(code, setObj, src);
-                SET_LABEL_CACHE[cacheKey] = label;
-            }
-            return `<option value="${escapeHtml(code)}">${escapeHtml(label)}</option>`;
-        }).join('');
-
-        sel.innerHTML = '<option value="">-- 처방 코드를 선택하세요 --</option>' + options;
+    function setFileDisplayName(fileName){
+        const f = (fileName||"").toString();
+        const lower = f.toLowerCase();
+        if (lower === "set_databaset.json" || lower === "신경차단술 조합.json") return "신경차단술 조합";
+        // set_****.json => **** 묶음코드
+        const m = lower.match(/^set_([^\/]+)\.json$/i);
+        if (m) return `${m[1]} 묶음코드`;
+        return f;
     }
 
-    function estimateFinalPayForSet(setObj, consultMode = "follow") {
-        try {
-            // setObj: {it:[{c,n,q,nb}], dg, cc}
-            const set = normalizeSet({
-                ...(setObj || {}),
-                it: Array.isArray(setObj?.it) ? setObj.it.map(x => ({...x})) : [],
-                dg: Array.isArray(setObj?.dg) ? [...setObj.dg] : [],
-                cc: Array.isArray(setObj?.cc) ? [...setObj.cc] : []
-            });
-
-            let bSum = 0, nbSum = 0;
-
-            // consult
-            const consultPrice = (consultMode === "first") ? (CONSULT_PRICES.first || 0)
-                                : (consultMode === "follow") ? (CONSULT_PRICES.follow || 0)
-                                : 0;
-            if (consultPrice > 0) bSum += consultPrice;
-
-            const items = Array.isArray(set.it) ? set.it : [];
-            items.forEach(item => {
-                const code = String(item.c || "").toUpperCase();
-                const fallbackName = (item.n || code);
-                const info = (DB.fee && DB.fee[code]) || (DB.drug && DB.drug[code]) || (DB.mat && DB.mat[code]) || null;
-                const name = info ? info[0] : fallbackName;
-                let price = info ? Number(info[1] || 0) : 0;
-
-                // renderItems와 동일: 전략 비급여 약제(리포라제 등)는 100000으로 취급
-                if (STRATEGY_DRUGS.some(sd => String(name || "").includes(sd))) price = 100000;
-
-                const q = parseFloat(item.q) || 0;
-                const isNB = !!item.nb || code.includes('SONO') || code.includes('C-ARM');
-                if (isNB) nbSum += price * q;
-                else bSum += price * q;
-            });
-
-            const bPay = Math.floor(Math.floor(bSum * 0.3) / 10) * 10;
-            const finalPay = Math.floor((bPay + nbSum) / 10) * 10;
-            return Math.floor(finalPay);
-        } catch (e) {
-            return 0;
-        }
+    function normalizeCodeForLookup(code){
+        const c = (code||"").toString().trim().toUpperCase();
+        if (!c) return "";
+        // 접미사(HA280KNEE 등) -> HA280
+        const m = c.match(/^([A-Z]{1,3}\d{2,6})[A-Z_]+$/);
+        if (m) return m[1];
+        return c;
     }
 
-    function inferRegionTag(setObj) {
-        const set = setObj || {};
-        const name = String(set.n || "");
-        const ccLines = Array.isArray(set.cc) ? set.cc : [];
+    function fmt1(n){
+        const x = parseFloat(n);
+        if (isNaN(x)) return "0.0";
+        return x.toFixed(1);
+    }
 
-        // 1) [부위] 형태 우선
-        const bracketFrom = (s) => {
-            const m = String(s || "").match(/^\[([^\]]+)\]/);
-            return m ? m[1].trim() : "";
-        };
-        for (const l of ccLines) {
-            const b = bracketFrom(l);
-            if (b) return b;
-        }
-        const b2 = bracketFrom(name);
-        if (b2) return b2;
+    function detectMainTag(setObj){
+        const it = (setObj && setObj.it) ? setObj.it : [];
+        const allNames = it.map(x => (x && x.n ? String(x.n) : "")).join(" ");
+        const allCodes = it.map(x => (x && x.c ? String(x.c) : "")).join(" ").toUpperCase();
 
-        const blob = (name + "\n" + ccLines.join("\n")).toLowerCase();
+        const hasHydro = /수압팽창술|수압\s*팽창|hydrodilat/i.test(allNames);
+        if (hasHydro) return "수팽";
 
-        // 2) Spine (우선)
-        const hasC = /c[\s\-]?\d/.test(blob) || blob.includes("c-spine") || blob.includes("cervical") || blob.includes("경추") || blob.includes("목");
-        const hasT = /t[\s\-]?\d/.test(blob) || blob.includes("t-spine") || blob.includes("thoracic") || blob.includes("흉추") || blob.includes("등");
-        const hasL = /l[\s\-]?\d/.test(blob) || blob.includes("l-spine") || blob.includes("lumbar") || blob.includes("요추") || blob.includes("허리");
-
-        if (hasC) return "목";
-        if (hasT) return "흉추";
-        if (hasL) return "허리";
-
-        // 3) Peripheral / joints (키워드)
-        const rules = [
-            ["어깨", ["어깨","견관절","견갑","rotator","shoulder"]],
-            ["팔꿈치", ["팔꿈치","주관절","elbow"]],
-            ["손목", ["손목","완관절","wrist"]],
-            ["손", ["손","수지","finger","hand","digital"]],
-            ["고관절", ["고관절","hip"]],
-            ["무릎", ["무릎","슬관절","knee"]],
-            ["발목", ["발목","족관절","ankle"]],
-            ["발", ["발","족부","foot"]],
-            ["대퇴", ["대퇴","thigh"]],
-            ["하퇴", ["하퇴","종아리","calf","leg"]],
-        ];
-
-        for (const [tag, kws] of rules) {
-            if (kws.some(k => blob.includes(String(k).toLowerCase()))) return tag;
-        }
+        const hasHA280 = /\bHA280\b/.test(allCodes) || /HA280/i.test(allCodes);
+        if (hasHA280) return "조영";
 
         return "";
     }
 
-    function summarizeBlocks(setObj, regionTag) {
-        const set = normalizeSet({
-            ...(setObj || {}),
-            it: Array.isArray(setObj?.it) ? setObj.it.map(x => ({...x})) : [],
-            dg: Array.isArray(setObj?.dg) ? [...setObj.dg] : [],
-            cc: Array.isArray(setObj?.cc) ? [...setObj.cc] : []
-        });
-
-        const items = Array.isArray(set.it) ? set.it : [];
-        const agg = {}; // abbr -> qty
-
-        const add = (abbr, q) => {
-            if (!abbr) return;
-            const v = parseFloat(q) || 0;
-            if (!v) return;
-            agg[abbr] = (agg[abbr] || 0) + v;
-        };
-
-        items.forEach(it => {
-            const code = String(it.c || "").toUpperCase();
-            const info = (DB.fee && DB.fee[code]) || (DB.drug && DB.drug[code]) || (DB.mat && DB.mat[code]) || null;
-            const name = String((info ? info[0] : (it.n || "")) || "").toLowerCase();
-
-            // central / spine
-            if (name.includes("후지내측지") || name.includes("내측지차단")) {
-                const tag = regionTag || inferRegionTag(setObj);
-                const mbb = (tag === "목") ? "CMBB" : (tag === "흉추") ? "TMBB" : "LMBB";
-                add(mbb, it.q);
-                return;
+    function sumBlockQty(setObj, patterns){
+        const it = (setObj && setObj.it) ? setObj.it : [];
+        let sum = 0;
+        it.forEach(x=>{
+            const n = (x && x.n!=null) ? String(x.n) : "";
+            const c = (x && x.c!=null) ? String(x.c).toUpperCase() : "";
+            if (patterns.some(p=> (p instanceof RegExp) ? (p.test(n)||p.test(c)) : (n.includes(p)||c.includes(String(p).toUpperCase())) )) {
+                const q = parseFloat(x.q) || 0;
+                sum += q;
             }
-            if (name.includes("선택적") && name.includes("신경근")) { add("SNRB", it.q); return; }
-            if (name.includes("추간관절") || name.includes("후관절")) { add("FJB", it.q); return; }
-
-            // peripheral / others
-            if (name.includes("척수신경후지")) { add("PDNB", it.q); return; }
-            if (name.includes("견갑신경")) { add("SSNB", it.q); return; }
-            if (name.includes("대퇴신경")) { add("FNB", it.q); return; }
-            if (name.includes("외측대퇴피")) { add("LFCNB", it.q); return; }
-            if (name.includes("요천골") && name.includes("신경총")) { add("PCB", it.q); return; }
-            if (name.includes("좌골신경")) { add("SCNB", it.q); return; }
-            if (name.includes("액와하부")) { add("APNB", it.q); return; }
-            if (name.includes("액와신경")) { add("ANB", it.q); return; }
         });
+        return sum;
+    }
 
-        const order = ["CMBB","TMBB","LMBB","SNRB","FJB","PDNB","SSNB","ANB","APNB","FNB","LFCNB","PCB","SCNB"];
+    function inferSpineRegion(setObj){
+        const cc = (setObj && setObj.cc) ? setObj.cc.join(" ") : "";
+        const nAll = ((setObj && setObj.it) ? setObj.it.map(x=>String(x.n||"")).join(" ") : "");
+        const s = (cc + " " + nAll).toUpperCase();
+
+        // 명시적 C/T/L
+        if (/\bC[\-\s]?\d/.test(s) || /CERV/i.test(s) || /경추|목/.test(s)) return "C";
+        if (/\bT[\-\s]?\d/.test(s) || /THOR/i.test(s) || /흉추|흉/.test(s)) return "T";
+        if (/\bL[\-\s]?\d/.test(s) || /LUMB/i.test(s) || /요추|허리/.test(s)) return "L";
+        return "";
+    }
+
+    function inferPeripheralPart(setObj){
+        const cc = (setObj && setObj.cc) ? setObj.cc.join(" ") : "";
+        const nAll = ((setObj && setObj.it) ? setObj.it.map(x=>String(x.n||"")).join(" ") : "");
+        const s = (cc + " " + nAll);
+
+        // 어깨/상완
+        if (/어깨|견관절|회전근|견봉|견갑|SSNB|견갑신경|액와신경|ANB/i.test(s)) return "어깨";
+        if (/팔꿈치|주관절/i.test(s)) return "팔꿈치";
+        if (/손목|수근|손가락|손\s*저림|hand|wrist|APNB|DIGITAL/i.test(s)) return "손목/손";
+
+        if (/고관절|hip|천장관절|sij|골반/i.test(s)) return "골반/고관절";
+        if (/무릎|슬관절|knee/i.test(s)) return "무릎";
+        if (/대퇴|허벅지|FNB|대퇴신경|LFCNB|외측대퇴피/i.test(s)) return "대퇴";
+        if (/발목|족관절|발가락|foot|ankle|하퇴|종아리|sural/i.test(s)) return "발목/발";
+
+        return "";
+    }
+
+    function isInjectionSet(setObj){
+        const it = (setObj && setObj.it) ? setObj.it : [];
+        const all = it.map(x=>String(x.n||"") + " " + String(x.c||"")).join(" ").toUpperCase();
+        // 주사 키워드(차단술/블록/신경/관절조영/수압팽창)
+        if (/차단|BLOCK|MBB|SNRB|PDNB|FJB|EPI|EPIDUR|SSNB|FNB|LFCNB|PCB|SCNB|액와|관절조영|HA280|수압팽창|HYDRODILAT/.test(all)) return true;
+        return false;
+    }
+
+    function buildBlocksLabel(setObj, spinePrefix){
         const parts = [];
-        order.forEach(k => {
-            if (!agg[k]) return;
-            const q = agg[k];
-            const qStr = (Math.abs(q - Math.round(q)) < 1e-6) ? String(Math.round(q)) : String(parseFloat(q.toFixed(4))).replace(/0+$/,'').replace(/\.$/,'');
-            parts.push(`${k}${qStr}`);
-        });
+        // 수팽/조영은 별도 mainTag로 처리(여기서는 블록만)
+
+        // 중앙(척추) 블록
+        const mbbQ = sumBlockQty(setObj, [/후지내측지/i, /\bMBB\b/i]);
+        if (mbbQ>0) parts.push(`${spinePrefix?spinePrefix+"-":""}MBB ${fmt1(mbbQ)}`);
+
+        const snrbQ = sumBlockQty(setObj, [/선택근신경근/i, /\bSNRB\b/i]);
+        if (snrbQ>0) parts.push(`${spinePrefix?spinePrefix+"-":""}SNRB ${fmt1(snrbQ)}`);
+
+        const fjbQ = sumBlockQty(setObj, [/추간관절/i, /\bFJB\b/i]);
+        if (fjbQ>0) parts.push(`${spinePrefix?spinePrefix+"-":""}FJB ${fmt1(fjbQ)}`);
+
+        const epiQ = sumBlockQty(setObj, [/경막외|EPIDURO|EPI\b/i]);
+        if (epiQ>0) parts.push(`${spinePrefix?spinePrefix+"-":""}EPI ${fmt1(epiQ)}`);
+
+        // 말초 블록
+        const ssnbQ = sumBlockQty(setObj, [/견갑신경/i, /\bSSNB\b/i]);
+        if (ssnbQ>0) parts.push(`SSNB ${fmt1(ssnbQ)}`);
+
+        const fnbQ = sumBlockQty(setObj, [/대퇴신경/i, /\bFNB\b/i]);
+        if (fnbQ>0) parts.push(`FNB ${fmt1(fnbQ)}`);
+
+        const lfcnQ = sumBlockQty(setObj, [/외측대퇴피/i, /\bLFCNB\b/i]);
+        if (lfcnQ>0) parts.push(`LFCNB ${fmt1(lfcnQ)}`);
+
+        const pcbQ = sumBlockQty(setObj, [/요천골신경총/i, /\bPCB\b/i]);
+        if (pcbQ>0) parts.push(`PCB ${fmt1(pcbQ)}`);
+
+        const scnbQ = sumBlockQty(setObj, [/좌골신경/i, /\bSCNB\b/i]);
+        if (scnbQ>0) parts.push(`SCNB ${fmt1(scnbQ)}`);
+
+        const anbQ = sumBlockQty(setObj, [/액와신경차단/i, /\bANB\b/i]);
+        if (anbQ>0) parts.push(`ANB ${fmt1(anbQ)}`);
+
+        const apnbQ = sumBlockQty(setObj, [/액와하부|digital|median|ulnar|radial/i, /\bAPNB\b/i]);
+        if (apnbQ>0) parts.push(`APNB ${fmt1(apnbQ)}`);
+
+        // PDNB는 척추 prefix를 달지 않음(말초 따라간다고 했으므로 표시만)
+        const pdnbQ = sumBlockQty(setObj, [/척수신경후지/i, /\bPDNB\b/i, /^LA357$/i]);
+        if (pdnbQ>0) parts.push(`PDNB ${fmt1(pdnbQ)}`);
+
         return parts;
     }
 
-    function buildSetOptionLabel(code, setObj, src) {
-        const set = setObj || {};
-        const name = String(set.n || "");
-
-        const isBase = (src && String(src).toLowerCase() === String(BASE_SET_FILE).toLowerCase());
-
-        // 기본 DB: [부위] 금액(원) + 차단술요약
-        if (isBase) {
-            const region = inferRegionTag(set);
-            const pay = estimateFinalPayForSet(set, "follow");
-            const blocks = summarizeBlocks(set, region);
-
-            const parts = [];
-            if (region) parts.push(`[${region}]`);
-            if (pay > 0) parts.push(`${fmt(pay)}원`);
-
-            if (blocks.length > 0) parts.push(blocks.join(' + '));
-
-            // 최소한 name은 유지(블록이 없어도)
-            if (parts.length === 0) return name ? name : `[${code}]`;
-            if (blocks.length === 0 && name) parts.push(name);
-
-            return parts.join(' ');
+    function extractTierFromNameOrMeta(setObj, finalPay){
+        // meta/fields
+        if (setObj){
+            const cand = [setObj.tier, setObj.t, setObj.target, setObj.amt, setObj.price];
+            for (const v of cand){
+                if (v==null) continue;
+                const n = parseFloat(v);
+                if (!isNaN(n) && n>0 && n<100) return Math.round(n*10)/10;
+            }
+            const name = String(setObj.n||"");
+            // 7.9 / 9.8
+            let m = name.match(/(\d{1,2}\.\d)/);
+            if (m) return Math.round(parseFloat(m[1])*10)/10;
+            // 79,000원 / 79000
+            m = name.replace(/,/g,"").match(/(\d{4,6})\s*원?/);
+            if (m){
+                const won = parseFloat(m[1]);
+                if (!isNaN(won) && won>=10000) return Math.round((won/10000)*10)/10;
+            }
         }
-
-        // 병원 세트(js/us/bang 등): 원본명칭 100% 유지(금액/가공 없음)
-        return `[${code}] ${name}`.trim();
+        if (finalPay && finalPay>0){
+            return Math.round((finalPay/10000)*10)/10;
+        }
+        return null;
     }
 
+    function calcFinalPayForSet(setObj){
+        // DOM을 건드리지 않고 동일한 계산식(급여 30% + 10원절사)만 복제
+        // (개별 항목의 급/비 구분은 item.nb + 일부 코드 힌트만 반영)
+        let bSum = 0, nbSum = 0;
+
+        // consult 포함(현재 선택 기준)
+        if (currentConsult && currentConsult !== "none"){
+            const cPrice = CONSULT_PRICES[currentConsult] || 0;
+            bSum += cPrice;
+        }
+
+        const it = (setObj && setObj.it) ? setObj.it : [];
+        it.forEach(item=>{
+            const rawCode = (item && item.c!=null) ? String(item.c) : "";
+            const codeU = normalizeCodeForLookup(rawCode);
+            const name = (item && item.n!=null) ? String(item.n) : "";
+            const q = parseFloat(item.q) || 0;
+
+            // 가격 조회 (fee 우선, 그 다음 drug, mat)
+            let info = null;
+            if (DB.fee && DB.fee[codeU]) info = DB.fee[codeU];
+            else if (DB.drug && DB.drug[codeU]) info = DB.drug[codeU];
+            else if (DB.mat && DB.mat[codeU]) info = DB.mat[codeU];
+
+            let p = info ? (info[1]||0) : 0;
+            if (STRATEGY_DRUGS && STRATEGY_DRUGS.some(sd => name.includes(sd))) p = 100000;
+
+            const isNb = !!(item.nb) || /SONO|C-ARM/i.test(codeU);
+            if (isNb) nbSum += (p*q);
+            else bSum += (p*q);
+        });
+
+        const bPay = Math.floor(Math.floor(bSum * 0.3) / 10) * 10;
+        const finalPay = Math.floor((bPay + nbSum) / 10) * 10;
+        return { bSum, nbSum, bPay, finalPay };
+    }
+
+    function computeSetMeta(){
+        SET_META = {};
+        if (!DB.sets) return;
+
+        Object.keys(DB.sets).forEach(key=>{
+            let setObj = DB.sets[key];
+            setObj = normalizeSet(setObj);
+            DB.sets[key] = setObj;
+
+            const isInj = isInjectionSet(setObj);
+            const spinePrefix = inferSpineRegion(setObj); // C/T/L or ""
+            const mainTag = detectMainTag(setObj);
+
+            // 부위 결정: central(척추) 힌트가 있으면 spine, 아니면 말초
+            let part = "";
+            if (spinePrefix){
+                part = (spinePrefix==="C") ? "목" : (spinePrefix==="T") ? "흉추" : "허리";
+            } else {
+                part = inferPeripheralPart(setObj) || "기타";
+            }
+
+            const blocks = buildBlocksLabel(setObj, spinePrefix);
+            const calcRes = calcFinalPayForSet(setObj);
+            const tier = extractTierFromNameOrMeta(setObj, calcRes.finalPay);
+
+            // 라벨 구성(기본: [코드] 원본명 유지, 단 database는 가공)
+            let label = `[${key}] ${setObj.n || ""}`;
+
+            // database 성격의 파일(set_databaset 선택 시)에서는 최대한 가공 라벨 사용
+            const fLower = (CURRENT_SET_FILE || "").toLowerCase();
+            const isDatabase = (fLower === "set_databaset.json" || fLower === "신경차단술 조합.json");
+            if (isDatabase){
+                const pieces = [];
+                if (tier!=null) pieces.push(tier.toFixed(1));
+                if (mainTag) pieces.push(mainTag);
+                blocks.forEach(b=>pieces.push(b));
+                const right = pieces.join(" + ");
+                label = `[${part}] ${right}`.trim();
+            }
+
+            const orderIdx = PART_ORDER.indexOf(part);
+            const sortKey = (orderIdx<0?999:orderIdx).toString().padStart(3,"0") + "_" + key;
+            const search = (key + " " + (setObj.n||"") + " " + label + " " + part + " " + blocks.join(" ")).toUpperCase();
+
+            SET_META[key] = { label, search, part, sortKey, isInj, tier, mainTag, blocks };
+        });
+    }
+
+    function toggleInjectionOnly(){
+        INJ_ONLY = !!document.getElementById('injOnlyToggle')?.checked;
+        refreshSetCodes();
+        // 검색 입력이 남아있으면 재필터
+        const inp = document.getElementById('setSearchInput');
+        if (inp && inp.value) searchSets(inp.value, inp);
+    }
+
+function refreshSetCodes() {
+        const sel = document.getElementById('setSel');
+        if (!sel) return;
+
+        if (!DB.sets || Object.keys(DB.sets).length === 0) {
+            sel.innerHTML = '<option value="">-- 처방 코드를 선택하세요 --</option>';
+            return;
+        }
+
+        // 메타 재계산
+        computeSetMeta();
+
+        // 키 목록(필터 + 정렬)
+        let keys = Object.keys(DB.sets);
+        if (INJ_ONLY) keys = keys.filter(k => SET_META[k] && SET_META[k].isInj);
+
+        keys.sort((a,b)=>{
+            const ka = SET_META[a]?.sortKey || a;
+            const kb = SET_META[b]?.sortKey || b;
+            return ka.localeCompare(kb);
+        });
+
+        // 그룹(부위)별 헤더 옵션 삽입
+        const byPart = {};
+        keys.forEach(k=>{
+            const p = SET_META[k]?.part || "기타";
+            (byPart[p] ||= []).push(k);
+        });
+
+        const order = PART_ORDER.filter(p => byPart[p] && byPart[p].length);
+        let html = '<option value="">-- 처방 코드를 선택하세요 --</option>';
+
+        order.forEach(p=>{
+            // cycle header
+            html += `<option value="" disabled>── ${p} ──</option>`;
+            byPart[p].forEach(k=>{
+                const lab = (SET_META[k] && SET_META[k].label) ? SET_META[k].label : `[${k}] ${(DB.sets[k]&&DB.sets[k].n)||""}`;
+                html += `<option value="${k}">${lab}</option>`;
+            });
+        });
+
+        // 기타가 남았으면 마지막에
+        const rest = keys.filter(k => !order.includes(SET_META[k]?.part||"기타"));
+        if (rest.length){
+            html += `<option value="" disabled>── 기타 ──</option>`;
+            rest.forEach(k=>{
+                const lab = SET_META[k]?.label || `[${k}] ${(DB.sets[k]&&DB.sets[k].n)||""}`;
+                html += `<option value="${k}">${lab}</option>`;
+            });
+        }
+
+        sel.innerHTML = html;
+    }
 
     // set 파일 선택/로드
     let CURRENT_SET_FILE = "";
     async function changeSetFile() {
         const sel = document.getElementById('setFileSel');
-        const fileRaw = sel ? sel.value : "";
-        const file = String(fileRaw || "").trim();
-
-        // 기본(BASE)만 사용
-        const applyBaseOnly = () => {
-            mergeSets({}, ""); // DB.sets = BASE
-            CURRENT_SET_FILE = "";
-            refreshSetCodes();
-            document.getElementById('setSel').value = "";
-            document.getElementById('dataView').style.display = 'none';
-
-            currentCustomItems = [];
-            deletedSetItems.clear();
-            document.getElementById('ccSwitch').checked = true;
-            document.getElementById('ccContent').style.display = 'block';
-            document.getElementById('setFileStatus').innerText = (Object.keys(BASE_SETS || {}).length > 0) ? BASE_SET_FILE : "-";
-        };
-
-        if (!file || file.toLowerCase() === BASE_SET_FILE.toLowerCase()) {
-            applyBaseOnly();
-            return;
-        }
+        const file = sel ? sel.value : "";
+        if (!file) return;
 
         try {
             document.getElementById('setFileStatus').innerText = "로딩...";
             const raw = await fetchJsonFromGithub(file);
-
-            // 선택 set 파일에도 overrides가 있으면 반영(선택사항)
-            if (raw && raw.overrides) applyOverridesToDB(raw.overrides);
-
-            const extraSets = unwrapData(raw);
-            mergeSets(extraSets && typeof extraSets === 'object' ? extraSets : {}, file);
+            const sets = unwrapData(raw);
+            DB.sets = (sets && typeof sets === 'object') ? sets : {};
             CURRENT_SET_FILE = file;
 
-            // 세트 코드 목록 갱신
-            refreshSetCodes();
+            // 표시명
+            document.getElementById('setFileStatus').innerText = setFileDisplayName(file) + ` (${Object.keys(DB.sets).length}개)`;
 
+            // 메타/세트 코드 목록 갱신
+            computeSetMeta();
+            refreshSetCodes();
             // 선택 초기화 + 화면 초기화
             document.getElementById('setSel').value = "";
             document.getElementById('dataView').style.display = 'none';
@@ -643,14 +674,15 @@
             document.getElementById('ccSwitch').checked = true;
             document.getElementById('ccContent').style.display = 'block';
 
-            document.getElementById('setFileStatus').innerText = file;
+            // status는 표시명 유지
+            // document.getElementById('setFileStatus').innerText = file;
         } catch(e) {
             console.error("set 파일 로드 실패:", e);
             document.getElementById('setFileStatus').innerText = "로드 실패";
-            // 실패 시에도 기본(BASE)은 유지
-            applyBaseOnly();
+            DB.sets = {};
+            refreshSetCodes();
         }
-}
+    }
 
     // [핵심] poket(포켓) 자동 분리: it 안에 섞인 PLAN/메모/증상/상병을 cc/dg로 정리
     function dbHasCode(codeUpper) {
@@ -749,6 +781,36 @@
                 DB.mat = unwrapData(matRaw);
             } catch(e) { console.warn("mat.json 로드 실패", e); }
 
+            // [추가] override.json (옵션) - 커스텀 코드/단가/코드별 예외를 여기에 누적
+            //  - fee/drug/mat 최상위로 병합되며, 같은 코드는 override가 우선합니다.
+            let overrideRaw = null;
+            try { overrideRaw = await fetchJsonFromGithub("override.json"); } catch(e) {}
+            const overrideObj = overrideRaw ? unwrapData(overrideRaw) : null;
+
+            // 기본 내장 override (사용자 제공/빈번 항목)
+            const BUILTIN_OVERRIDE = {
+                drug: {
+                    "LIDO2": ["리도카인염산 20ml 2% (휴온스)", 649, "670603485"],
+                    "NS100": ["대한멸균생리식염수(0.9% 100mL)", 1110, "645100562"],
+                    "DW100": ["포도당주사액(5%) 100mL", 1188, "645100973"]
+                }
+            };
+
+            function applyOverrides(ov){
+                if (!ov) return;
+                ["fee","drug","mat"].forEach(cat=>{
+                    if (ov[cat] && typeof ov[cat]==="object"){
+                        Object.keys(ov[cat]).forEach(code=>{
+                            DB[cat][code.toUpperCase()] = ov[cat][code];
+                        });
+                    }
+                });
+            }
+            // 순서: built-in -> override.json
+            applyOverrides(BUILTIN_OVERRIDE);
+            applyOverrides(overrideObj);
+
+
 
             // fee/drug/mat 중 일부가 비어 있으면 기존 database.json에서 보강(호환용)
             try {
@@ -802,39 +864,43 @@
             document.getElementById('st-db').innerText = fmt(flatDB.length) + "건";
 
             // 세트코드 드롭다운 초기화
-            await loadBaseSets();
             refreshSetCodes();
+
+            // set*.json 파일 드롭다운 준비
+            
             // set*.json 파일 드롭다운 준비
             const files = await listSetFiles();
+
             const setSel = document.getElementById('setFileSel');
             if (setSel) {
-                // B안: 기본 세트(BASE_SET_FILE)는 이미 로드되어 있음. 여기서는 "추가 세트 파일"만 선택하게 함.
-                const allFiles = Array.isArray(files) ? files : [];
-                const uniq = Array.from(new Set(allFiles))
-                    .filter(f => f && /^set.*\.json$/i.test(f))
-                    .sort((a,b) => a.localeCompare(b));
-
-                // 드롭다운 구성: 기본은 "-"(추가 세트 없음)
-                let htmlOpt = '<option value="">-</option>';
-                // 기본 파일도 선택 가능(선택해도 결과는 동일: BASE만 사용)
-                if (!uniq.includes(BASE_SET_FILE)) {
-                    htmlOpt += `<option value="${BASE_SET_FILE}">${BASE_SET_FILE} (기본)</option>`;
+                // 표시명(text)만 바꾸고, value(실제 파일명)는 그대로 유지
+                const options = [];
+                if (!files || files.length === 0) {
+                    setSel.innerHTML = '<option value="">set*.json 없음</option>';
+                    document.getElementById('setFileStatus').innerText = "-";
                 } else {
-                    // 목록에 있으면 맨 위에 기본 표시를 추가로 넣어줌
-                    htmlOpt += `<option value="${BASE_SET_FILE}">${BASE_SET_FILE} (기본)</option>`;
+                    // 정렬: set_databaset 우선, 나머지는 파일명 기준
+                    const norm = (files || []).slice().sort((a,b)=>{
+                        const al = a.toLowerCase(), bl = b.toLowerCase();
+                        if (al === "set_databaset.json") return -1;
+                        if (bl === "set_databaset.json") return 1;
+                        return al.localeCompare(bl);
+                    });
+
+                    norm.forEach(f=>{
+                        const text = setFileDisplayName(f);
+                        options.push(`<option value="${f}">${text}</option>`);
+                    });
+
+                    setSel.innerHTML = options.join("");
+
+                    // 기본: set_databaset.json이 있으면 자동 로드, 없으면 첫번째
+                    const preferred = norm.find(f=>{const l=f.toLowerCase(); return l==="set_databaset.json" || l==="신경차단술 조합.json";}) || norm[0];
+                    setSel.value = preferred;
+                    await changeSetFile();
                 }
-
-                uniq.forEach(f => {
-                    if (String(f).toLowerCase() === String(BASE_SET_FILE).toLowerCase()) return;
-                    htmlOpt += `<option value="${f}">${f}</option>`;
-                });
-
-                setSel.innerHTML = htmlOpt;
-                setSel.value = ""; // 기본(추가 세트 없음)
-                // 상태표시: 기본 파일 로드 여부
-                document.getElementById('setFileStatus').innerText = (Object.keys(BASE_SETS || {}).length > 0) ? BASE_SET_FILE : "-";
-}
-        } catch(e) {
+            }
+} catch(e) {
             console.error("DB 로드 실패", e);
         }
     }
@@ -860,6 +926,9 @@
         currentConsult = type;
         document.querySelectorAll('.c-btn').forEach(b => b.classList.remove('active'));
         document.getElementById('btn-' + type).classList.add('active');
+        // 드롭다운 라벨(금액/부위)도 consult에 따라 변할 수 있으므로 갱신
+        computeSetMeta();
+        refreshSetCodes();
         renderItems();
     }
 
@@ -876,20 +945,32 @@
 
         if(!val || val.length < 1) { layer.style.display = 'none'; return; }
 
+        computeSetMeta();
+
         const rect = inputEl.getBoundingClientRect();
         layer.style.top = (rect.bottom + window.scrollY + 5) + 'px';
         layer.style.left = (rect.left + window.scrollX) + 'px';
         layer.style.width = Math.max(300, rect.width) + 'px';
 
-        const keys = Object.keys(DB.sets);
-        const filtered = keys.filter(k => k.includes(val.toUpperCase()) || DB.sets[k].n.includes(val)).slice(0, 30);
+        const q = val.toUpperCase();
+        let keys = Object.keys(DB.sets || {});
+        if (INJ_ONLY) keys = keys.filter(k => SET_META[k] && SET_META[k].isInj);
 
-        layer.innerHTML = filtered.map(k => `
-            <div class="search-item" onclick="selectSetFromSearch('${k}')">
-                <span style="color:#0052cc; font-weight:800;">${k}</span>
-                <span style="flex:1; margin:0 10px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${DB.sets[k].n}</span>
-            </div>`).join('');
-        
+        const filtered = keys.filter(k => {
+            const meta = SET_META[k];
+            if (!meta) return false;
+            return meta.search.includes(q);
+        }).slice(0, 40);
+
+        layer.innerHTML = filtered.map(k => {
+            const meta = SET_META[k];
+            const lab = meta ? meta.label : `[${k}] ${(DB.sets[k]&&DB.sets[k].n)||""}`;
+            return `
+                <div class="search-item" onclick="selectSetFromSearch('${k}')">
+                    <span style="color:#0052cc; font-weight:900;">${lab}</span>
+                </div>`;
+        }).join('');
+
         layer.style.display = filtered.length ? 'block' : 'none';
     }
 
@@ -1202,7 +1283,7 @@
                     const qP = ((pt - res.bPay - otherNb) / pAdj).toFixed(4);
                     if(qP >= 0) {
                         const bgStyle = (pt === target) ? "background:#eef6ff; border-color:var(--blue);" : "";
-                        mHTML += `<div class="matrix-row" onclick="setTarget(${pt})" style="${bgStyle}"><span class="matrix-target">${fmt(pt)}원</span><span class="matrix-val">${qP} ea</span></div>`;
+                        mHTML += `<div class="matrix-row" onclick="setTarget(${pt})" style="${bgStyle}"><span class="matrix-target">${fmt(pt)}원</span><span class="matrix-val">수량 ${qP}</span></div>`;
                     }
                 }
                 document.getElementById('matrixTable').innerHTML = mHTML;
