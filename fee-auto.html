@@ -16,13 +16,15 @@
         header { width: 100%; padding: 25px 0; text-align: center; position: relative; z-index: 1; }
         .top-logo { width: 170px; filter: grayscale(1) brightness(.45) contrast(1.15); opacity: 0.8; }
         
+        /* 드롭다운 박스 너비 축소 (240px -> 210px) */
         #syncBoard { position: absolute; top: 10px; right: 20px; background: rgba(255,255,255,0.8); border: 1px solid #222; border-radius: 8px; padding: 12px 18px; font-size: 12px; z-index: 1000; box-shadow: 0 4px 15px rgba(0,0,0,0.05); width: 240px; backdrop-filter: blur(5px); }
-        #setBoard { position: absolute; top: 10px; left: 20px; background: rgba(255,255,255,0.8); border: 1px solid #222; border-radius: 8px; padding: 12px 18px; font-size: 12px; z-index: 1000; box-shadow: 0 4px 15px rgba(0,0,0,0.05); width: 240px; backdrop-filter: blur(5px); }
+        #setBoard { position: absolute; top: 10px; left: 20px; background: rgba(255,255,255,0.8); border: 1px solid #222; border-radius: 8px; padding: 12px 18px; font-size: 12px; z-index: 1000; box-shadow: 0 4px 15px rgba(0,0,0,0.05); width: 210px; backdrop-filter: blur(5px); }
         #setBoard select { width: 100%; margin-top: 6px; padding: 6px 8px; border-radius: 10px; border: 1px solid #ddd; font-weight: 700; font-size: 12px; background: rgba(255,255,255,0.9); }
         .sync-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
         .sync-row:last-child { margin-bottom: 0; }
         .sync-label { color: #555; font-weight: 700; }
         .sync-val { font-weight: 800; color: #333; }
+        .ver-tag { font-size: 10px; color: #999; margin-left: 5px; font-weight: normal; }
 
         .container { width: 1550px; max-width: 98%; margin: 0 auto; display: grid; grid-template-columns: 1.75fr 1.25fr; gap: 25px; padding-bottom: 80px; position: relative; z-index: 1; flex: 1; }
         
@@ -61,10 +63,20 @@
         .c-btn:hover { background: rgba(255,255,255,0.6); }
         .c-btn.active { border-color: var(--primary); background: var(--primary); color: #fff; }
 
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th { padding: 8px 10px; text-align: left; font-size: 0.8em; color: #666; border-bottom: 2px solid rgba(0,0,0,0.1); background: transparent !important; }
-        td { padding: 6px 10px; background: transparent !important; font-size: 0.95em; font-weight: 600; border-bottom: 1px solid rgba(0,0,0,0.05); vertical-align: middle; }
+        /* [수정 v0.0.0.3] 테이블 레이아웃 대개편: 명칭 칸 확장 */
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; table-layout: fixed; }
+        th { padding: 8px 10px; text-align: left; font-size: 0.8em; color: #666; border-bottom: 2px solid rgba(0,0,0,0.1); background: transparent !important; white-space: nowrap; }
+        td { padding: 6px 10px; background: transparent !important; font-size: 0.95em; font-weight: 600; border-bottom: 1px solid rgba(0,0,0,0.05); vertical-align: middle; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         
+        /* 열 너비 고정 (명칭 칸을 최대한 확보하기 위함) */
+        th:nth-child(1) { width: 14%; } /* 코드 */
+        th:nth-child(2) { width: auto; } /* 명칭 (나머지 전체) */
+        th:nth-child(3) { width: 85px; text-align:right; } /* 단가 */
+        th:nth-child(4) { width: 65px; text-align:center; } /* 수량 */
+        th:nth-child(5) { width: 60px; text-align:center; } /* 구분 */
+        th:nth-child(6) { width: 45px; text-align:center; } /* 유지 */
+        th:nth-child(7) { width: 45px; text-align:center; } /* 삭제 */
+
         .input-wrapper {
             position: relative;
             border: 1px solid rgba(0,0,0,0.2);
@@ -107,7 +119,7 @@
         .box-input-num { border: 1px solid rgba(0,0,0,0.25); border-radius: 4px; background: transparent !important; padding: 0 4px; height: 32px; font-weight: 800; outline: none; font-size: 13px; width: 100%; transition: 0.2s; color: #333; text-align: center; }
         .box-input-num:focus { border-color: var(--blue); background: rgba(255,255,255,0.2) !important; }
 
-        .type-btn { border: 1px solid transparent; border-radius: 6px; padding: 0 10px; height: 28px; font-size: 11px; font-weight: 800; cursor: pointer; transition: 0.2s; width: 65px; text-align: center; }
+        .type-btn { border: 1px solid transparent; border-radius: 6px; padding: 0 10px; height: 28px; font-size: 11px; font-weight: 800; cursor: pointer; transition: 0.2s; width: 100%; text-align: center; }
         .type-btn:hover { transform: translateY(-1px); box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .type-b { background: #e3f2fd; color: #0052cc; border-color: #bbdefb; }
         .type-nb { background: #ffeef0; color: #d73a49; border-color: #ffcdd2; }
@@ -116,15 +128,15 @@
         .badge-req { background: #fff3e0; color: #ef6c00; border: 1px solid #ffe0b2; }
         .badge-con { background: #e8f5e9; color: #2e7d32; border: 1px solid #c8e6c9; }
 
-        .p-input { width: 90px; text-align: right; color: #333; }
-        .q-input { width: 60px; text-align: center; color: var(--accent); }
+        .p-input { width: 100%; text-align: right; color: #333; }
+        .q-input { width: 100%; text-align: center; color: var(--accent); }
 
         .diag-table { width: 100%; margin-bottom: 25px; }
         .diag-table td { padding: 8px 10px; background: transparent !important; border-bottom: 1px dashed rgba(0,0,0,0.1); color: #444; }
         .diag-code { font-weight: 800; color: var(--blue); }
 
         .set-selector-group { display: flex; gap: 10px; position: relative; }
-        #setSel { flex: 1; background: rgba(255,255,255,0.3); border: 2px solid rgba(0,0,0,0.2); border-radius: 8px; padding: 12px; outline: none; cursor: pointer; font-weight: 800; font-size: 1.1em; }
+        #setSel { flex: 1; background: rgba(255,255,255,0.3); border: 2px solid rgba(0,0,0,0.2); border-radius: 8px; padding: 12px; outline: none; cursor: pointer; font-weight: 800; font-size: 1.1em;  min-width:0;}
         #setSearchInput { width: 140px; border: 2px solid rgba(0,0,0,0.2); border-radius: 8px; padding: 0 12px; background: rgba(255,255,255,0.5); font-weight: 800; outline: none; font-size: 13px; }
         #setSearchInput:focus { border-color: var(--blue); background: #fff; }
 
@@ -159,9 +171,18 @@
         .inj-only-toggle{display:flex;align-items:center;gap:6px;padding:6px 10px;border:2px solid rgba(0,0,0,0.15);border-radius:10px;background:rgba(255,255,255,0.35);cursor:pointer;font-weight:900;font-size:12px;user-select:none;white-space:nowrap;min-width:74px;}
         .inj-only-toggle input{accent-color: var(--blue); width:14px; height:14px;}
 
-/* 안정적인 레이아웃(옵션 길이에 영향받지 않도록) */
-.select-line select, .select-line input {min-width:0;}
-.inj-only-toggle{flex:0 0 auto;}
+        /* 안정적인 레이아웃 */
+        .select-line select, .select-line input {min-width:0;}
+        .inj-only-toggle{flex:0 0 auto;}
+
+        /* 차단술 조정 UI - 투명도 0.2 */
+        .block-adjust-row{display:flex; justify-content:space-between; align-items:center; gap:10px; padding:10px 12px; background:rgba(255,255,255,0.2); border:1px solid rgba(0,0,0,0.12); border-radius:8px; margin-top:8px;}
+        .block-adjust-label{font-size:12px; font-weight:900; color:#444;}
+        .block-adjust-ctrl{display:flex; align-items:center; gap:8px;}
+        .block-btn{width:34px; height:30px; border-radius:8px; border:2px solid rgba(0,0,0,0.18); background:rgba(255,255,255,0.5); font-weight:900; cursor:pointer; font-size:14px; line-height:1;}
+        .block-btn:hover{border-color: var(--blue); box-shadow:0 2px 5px rgba(0,0,0,0.06); transform: translateY(-1px);}
+        .block-step{width:70px; padding:6px 8px; border-radius:8px; border:2px solid rgba(0,0,0,0.18); background:rgba(255,255,255,0.55); font-weight:900; text-align:center;}
+
 </style>
 </head>
 <body onclick="closeSearch(event)">
@@ -170,7 +191,7 @@
 
 
 <div id="setBoard">
-    <div class="sync-row"><span class="sync-label">처방세트 파일</span><span id="setFileStatus" class="sync-val">-</span></div>
+    <div class="sync-row"><span class="sync-label">처방세트</span><span id="setFileStatus" class="sync-val">-</span><span class="ver-tag">v0.0.0.3</span></div>
     <select id="setFileSel" onchange="changeSetFile()">
         <option value="">로딩중...</option>
     </select>
@@ -226,13 +247,13 @@
                 <table>
                     <thead>
                         <tr>
-                            <th style="width:15%">처방코드</th>
+                            <th>처방코드</th>
                             <th>처방명칭</th>
-                            <th style="width:18%; text-align:right;">단가</th>
-                            <th style="width:12%; text-align:center;">수량</th>
-                            <th style="width:10%; text-align:center;">구분</th>
-                            <th style="width:6%; text-align:center;">유지</th>
-                            <th style="width:6%; text-align:center;">삭제</th>
+                            <th style="text-align:right;">단가</th>
+                            <th style="text-align:center;">수량</th>
+                            <th style="text-align:center;">구분</th>
+                            <th style="text-align:center;">유지</th>
+                            <th style="text-align:center;">삭제</th>
                         </tr>
                     </thead>
                     <tbody id="itemList"></tbody>
@@ -268,9 +289,13 @@
                 <div id="finalPay">0</div>
             </div>
 
+            <div id="blockAdjustWrap" style="margin-top:25px; text-align:left; border-top: 1px dashed rgba(0,0,0,0.1); padding-top: 20px;">
+                </div>
+
             <div class="section-title" style="margin-top:40px; border-left-color: var(--blue);">금액별 수량 조정</div>
             <div id="matrixAdjustName" style="font-size:11px; color:var(--blue); font-weight:800; margin-bottom:10px; text-align:right;">-</div>
             <div id="matrixTable" class="matrix-container"></div>
+            
         </div>
     </div>
 </div>
@@ -288,6 +313,7 @@
     let currentCustomItems = []; 
     let deletedSetItems = new Set();
     const STRATEGY_DRUGS = ["비엠히루니다제", "말린다주", "리포라제주"];
+    // [수정] 조영필요 코드 리스트 (LA 일회성 포함 기존 유지)
     const CONTRAST_REQUIRED_CODES = ["LA354", "LA359", "LA253", "LA355", "LA352", "HA280", "MM410"];
     const CONTRAST_KEYWORDS = [
         "OMNI", "VISI", "IOP", "HEX", "BONO", "CONTRAST", 
@@ -631,6 +657,12 @@
                 label = `[${part}] ${tierTxt}${right?(" " + right):""}`.trim();
             }
 
+
+            // 라벨이 비었거나 []로 시작하면(분류 실패/정리 과정) 원래 명칭으로 되돌림
+            if (!label || /^\[\s*\]/.test(label)) {
+                label = ((setObj && setObj.n) ? setObj.n : key) || "(이름없음)";
+                label = String(label).replace(/\s{2,}/g, " ").trim();
+            }
             const orderIdx = PART_ORDER.indexOf(part);
             const sortKey = (orderIdx<0?999:orderIdx).toString().padStart(3,"0") + "_" + key;
             const search = (key + " " + (setObj.n||"") + " " + label + " " + part + " " + blocks.join(" ")).toUpperCase();
@@ -650,6 +682,8 @@
 function refreshSetCodes() {
         const sel = document.getElementById('setSel');
         if (!sel) return;
+
+        const prev = sel.value;
 
         if (!DB.sets || Object.keys(DB.sets).length === 0) {
             sel.innerHTML = '<option value="">-- 처방 코드를 선택하세요 --</option>';
@@ -699,6 +733,8 @@ function refreshSetCodes() {
         }
 
         sel.innerHTML = html;
+
+        if (prev && DB.sets && DB.sets[prev]) { sel.value = prev; }
     }
 
     // set 파일 선택/로드
@@ -897,8 +933,24 @@ function refreshSetCodes() {
             if (datesFromDatabase) DB.dates = datesFromDatabase;
 
             // syncBoard
-            let displayDate = "-";
-            if (DB.dates && DB.dates.fee && DB.dates.fee !== "-") displayDate = DB.dates.fee;
+            const displayDate = (() => {
+                // 1) database.json dates (호환)
+                if (DB.dates) {
+                    const cand = DB.dates.fee || DB.dates.apply || DB.dates.applied || DB.dates.updated || DB.dates.date;
+                    if (cand && cand !== "-") return String(cand);
+                }
+                // 2) fee.json meta 추정
+                try {
+                    if (typeof feeRaw !== "undefined" && feeRaw) {
+                        const meta = feeRaw.meta || feeRaw.dates || feeRaw.date || feeRaw.updated || feeRaw.updatedAt || feeRaw.applyDate || feeRaw.appliedDate;
+                        if (meta && typeof meta === "string") return meta;
+                        const txt = JSON.stringify(feeRaw);
+                        const m = txt.match(/(\d{2,4}[\./-]\d{1,2}[\./-]\d{1,2})/);
+                        if (m) return m[1];
+                    }
+                } catch(e) {}
+                return "-";
+            })();
             document.getElementById('st-date').innerText = displayDate;
 
             // 진찰료 버튼
@@ -1121,10 +1173,15 @@ function refreshSetCodes() {
         const tbody = document.getElementById('itemList');
         tbody.innerHTML = '';
         
+        
         if(currentConsult !== "none") {
-            const price = CONSULT_PRICES[currentConsult];
-            const name = currentConsult === 'first' ? "진찰료(초진)" : "진찰료(재진)";
-            addRow(tbody, "CONST", name, price, 1, false, true, false);
+            const consultCode = currentConsult === 'first' ? "AA154" : "AA254";
+            const dbPrice = getFeePrice(consultCode);
+            const price = dbPrice || CONSULT_PRICES[currentConsult] || 0;
+            const dbName = (DB.fee && DB.fee[consultCode] && DB.fee[consultCode][0]) ? DB.fee[consultCode][0] : null;
+            const name = dbName || (currentConsult === 'first' ? "진찰료(초진)" : "진찰료(재진)");
+            const codeToUse = dbPrice ? consultCode : "CONST";
+            addRow(tbody, codeToUse, name, price, 1, false, true, false);
         }
 
         set.it.forEach(item => {
@@ -1155,6 +1212,8 @@ function refreshSetCodes() {
         });
 
         autoBalance();
+        // [추가] 차단술 조정 버튼 재렌더링
+        renderBlockAdjuster();
     }
 
     function addRow(target, code, name, price, qty, isNB, isLocked, isCarry, isCustom = false, customIdx = null) {
@@ -1165,7 +1224,8 @@ function refreshSetCodes() {
 
         let nameHtml = `<div class="input-wrapper"><input class="box-input" value="${name}" oninput="searchLive(this.value, 'cell', this)" onfocus="searchLive(this.value, 'cell', this)">`;
         
-        if (CONTRAST_REQUIRED_CODES.includes(code)) {
+        // [수정] 조영필요 배지 조건: HA로 시작하거나, 기존 CONTRAST_REQUIRED_CODES 목록에 있는 경우(LA 일회성 등)
+        if (CONTRAST_REQUIRED_CODES.includes(code) || code.startsWith('HA')) {
             nameHtml += `<span class="badge badge-req">조영필요</span>`;
         }
         const upperName = name.toUpperCase();
@@ -1183,11 +1243,11 @@ function refreshSetCodes() {
         tr.innerHTML = `
             <td><div class="input-wrapper"><input class="box-input code-type" value="${code}" onchange="updateRowByCode(this, ${isCustom}, ${customIdx})" oninput="searchLive(this.value, 'cell', this)"></div></td>
             <td>${nameHtml}</td>
-            <td align="right"><input class="box-input-num p-input" value="${fmt(price)}" oninput="syncRow(this, '${code}', ${isCustom}, ${customIdx})"></td>
-            <td align="center"><input class="box-input-num q-input" type="number" value="${qty}" step="0.1" oninput="syncRow(this, '${code}', ${isCustom}, ${customIdx})"></td>
-            <td align="center">${typeBtnHtml}</td>
-            <td align="center"><button class="carry-btn ${isCarry?'active':''}" onclick="toggleCarry(this, '${code}')">📌</button></td>
-            <td align="center"><button class="del-btn" onclick="deleteRow(this, '${code}', ${isCustom}, ${customIdx})">🗑️</button></td>
+            <td><input class="box-input-num p-input" value="${fmt(price)}" oninput="syncRow(this, '${code}', ${isCustom}, ${customIdx})"></td>
+            <td><input class="box-input-num q-input" type="number" value="${qty}" step="0.1" oninput="syncRow(this, '${code}', ${isCustom}, ${customIdx})"></td>
+            <td>${typeBtnHtml}</td>
+            <td><button class="carry-btn ${isCarry?'active':''}" onclick="toggleCarry(this, '${code}')">📌</button></td>
+            <td><button class="del-btn" onclick="deleteRow(this, '${code}', ${isCustom}, ${customIdx})">🗑️</button></td>
         `;
         target.appendChild(tr);
     }
@@ -1210,6 +1270,7 @@ function refreshSetCodes() {
             }
         }
         autoBalance();
+        renderBlockAdjuster(); // [추가] 코드가 바뀌면 차단술 목록도 바뀔 수 있음
     }
 
     function toggleType(btn, code, isCustom, idx) {
@@ -1352,6 +1413,86 @@ function refreshSetCodes() {
         document.getElementById('finalPay').innerText = fmt(f.finalPay);
     }
     window.onload = init;
+
+
+    // ===== [신규] 동적 차단술 버튼 생성 및 제어 로직 (완전 개편) =====
+    
+    // 처방 내역에서 'LA'로 시작하는 행들을 순서대로 찾음
+    function getLArows() {
+        const rows = Array.from(document.querySelectorAll('#itemList tr'));
+        return rows.filter(r => {
+            const code = (r.dataset.code || '').toUpperCase();
+            // 입력칸이 비어있는 경우(초기 상태) 고려
+            const inputVal = r.querySelector('.box-input.code-type').value.toUpperCase();
+            return (code.startsWith('LA') || inputVal.startsWith('LA'));
+        });
+    }
+
+    function renderBlockAdjuster() {
+        const laRows = getLArows();
+        const count = laRows.length;
+        // 최소 3개는 보여주고, 4개 이상이면 그만큼 늘림
+        const displayCount = Math.max(3, count);
+        
+        let html = '<div class="section-title" style="border-left-color: var(--blue);">차단술 수량 조정</div>';
+
+        for(let i=0; i < displayCount; i++) {
+            const exists = (i < count);
+            let label = `${i+1}차단술`;
+            let name = "";
+            let btnDisabled = "";
+            
+            if (exists) {
+                const tr = laRows[i];
+                const rawName = tr.querySelector('.box-input:not(.code-type)').value;
+                name = `(${rawName})`;
+            } else {
+                name = `<span style="color:#aaa; font-weight:normal;">(없음)</span>`;
+                btnDisabled = "disabled style='opacity:0.3; cursor:default;'";
+            }
+
+            html += `
+            <div class="block-adjust-row">
+                <div class="block-adjust-label" style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${label} <span style="font-size:0.9em; margin-left:4px;">${name}</span></div>
+                <div class="block-adjust-ctrl">
+                    <button class="block-btn" ${btnDisabled} onclick="adjustBlockByIndex(${i}, -1)">−</button>
+                    <input id="blockStep_${i}" class="block-step" type="number" value="0.25" step="0.05" ${btnDisabled}>
+                    <button class="block-btn" ${btnDisabled} onclick="adjustBlockByIndex(${i}, +1)">＋</button>
+                </div>
+            </div>`;
+        }
+        
+        document.getElementById('blockAdjustWrap').innerHTML = html;
+    }
+
+    function adjustBlockByIndex(index, dir) {
+        const laRows = getLArows();
+        if (!laRows[index]) return; // 해당 순번의 차단술이 없으면 종료
+
+        const tr = laRows[index];
+        const stepEl = document.getElementById(`blockStep_${index}`);
+        const step = stepEl ? (parseFloat(stepEl.value) || 0) : 0;
+        
+        if (!step) return;
+
+        const qEl = tr.querySelector('.q-input');
+        if (!qEl) return;
+
+        const cur = parseFloat(qEl.value) || 0;
+        let next = cur + (dir * step);
+        if (next < 0) next = 0;
+        
+        next = Math.round(next * 100) / 100;
+        qEl.value = next.toFixed(2).replace(/\.00$/,'\.0').replace(/(\.\d)0$/,'$1');
+
+        // 변경 사항 반영
+        const isCustom = tr.dataset.custom === 'true';
+        const idx = isCustom ? parseInt(tr.dataset.idx, 10) : null;
+        const code = tr.dataset.code; // or input val
+        
+        try { syncRow(qEl, code, isCustom, idx); } catch(e) {}
+    }
+
 </script>
 </body>
 </html>
