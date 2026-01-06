@@ -16,7 +16,6 @@
         header { width: 100%; padding: 25px 0; text-align: center; position: relative; z-index: 1; }
         .top-logo { width: 170px; filter: grayscale(1) brightness(.45) contrast(1.15); opacity: 0.8; }
         
-        /* 드롭다운 박스 너비 축소 (240px -> 210px) */
         #syncBoard { position: absolute; top: 10px; right: 20px; background: rgba(255,255,255,0.8); border: 1px solid #222; border-radius: 8px; padding: 12px 18px; font-size: 12px; z-index: 1000; box-shadow: 0 4px 15px rgba(0,0,0,0.05); width: 240px; backdrop-filter: blur(5px); }
         #setBoard { position: absolute; top: 10px; left: 20px; background: rgba(255,255,255,0.8); border: 1px solid #222; border-radius: 8px; padding: 12px 18px; font-size: 12px; z-index: 1000; box-shadow: 0 4px 15px rgba(0,0,0,0.05); width: 210px; backdrop-filter: blur(5px); }
         #setBoard select { width: 100%; margin-top: 6px; padding: 6px 8px; border-radius: 10px; border: 1px solid #ddd; font-weight: 700; font-size: 12px; background: rgba(255,255,255,0.9); }
@@ -63,19 +62,19 @@
         .c-btn:hover { background: rgba(255,255,255,0.6); }
         .c-btn.active { border-color: var(--primary); background: var(--primary); color: #fff; }
 
-        /* [수정 v0.0.0.3] 테이블 레이아웃 대개편: 명칭 칸 확장 */
+        /* [수정 v0.0.0.4] 테이블 열 너비 최적화: 명칭 칸 확보 */
         table { width: 100%; border-collapse: collapse; margin-top: 10px; table-layout: fixed; }
         th { padding: 8px 10px; text-align: left; font-size: 0.8em; color: #666; border-bottom: 2px solid rgba(0,0,0,0.1); background: transparent !important; white-space: nowrap; }
         td { padding: 6px 10px; background: transparent !important; font-size: 0.95em; font-weight: 600; border-bottom: 1px solid rgba(0,0,0,0.05); vertical-align: middle; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         
-        /* 열 너비 고정 (명칭 칸을 최대한 확보하기 위함) */
-        th:nth-child(1) { width: 14%; } /* 코드 */
-        th:nth-child(2) { width: auto; } /* 명칭 (나머지 전체) */
-        th:nth-child(3) { width: 85px; text-align:right; } /* 단가 */
-        th:nth-child(4) { width: 65px; text-align:center; } /* 수량 */
-        th:nth-child(5) { width: 60px; text-align:center; } /* 구분 */
-        th:nth-child(6) { width: 45px; text-align:center; } /* 유지 */
-        th:nth-child(7) { width: 45px; text-align:center; } /* 삭제 */
+        /* [수정] 최소한의 너비만 남기고 모두 처방명칭(2번째)에 할당 */
+        th:nth-child(1) { width: 95px; }  /* 처방코드: LA357 등 짧음 */
+        th:nth-child(2) { width: auto; }  /* 처방명칭: 나머지 전부 */
+        th:nth-child(3) { width: 80px; text-align:right; }  /* 단가 */
+        th:nth-child(4) { width: 55px; text-align:center; }  /* 수량 */
+        th:nth-child(5) { width: 60px; text-align:center; }  /* 구분 */
+        th:nth-child(6) { width: 40px; text-align:center; }  /* 유지 */
+        th:nth-child(7) { width: 40px; text-align:center; }  /* 삭제 */
 
         .input-wrapper {
             position: relative;
@@ -175,10 +174,11 @@
         .select-line select, .select-line input {min-width:0;}
         .inj-only-toggle{flex:0 0 auto;}
 
-        /* 차단술 조정 UI - 투명도 0.2 */
+        /* [수정 v0.0.0.4] 차단술 라벨 레이아웃 개선 */
+        /* min-width: 0 이 핵심 - flex 컨테이너 안에서 텍스트가 길어져도 부모를 뚫고 나가지 않게 함 */
         .block-adjust-row{display:flex; justify-content:space-between; align-items:center; gap:10px; padding:10px 12px; background:rgba(255,255,255,0.2); border:1px solid rgba(0,0,0,0.12); border-radius:8px; margin-top:8px;}
-        .block-adjust-label{font-size:12px; font-weight:900; color:#444;}
-        .block-adjust-ctrl{display:flex; align-items:center; gap:8px;}
+        .block-adjust-label{font-size:12px; font-weight:900; color:#444; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
+        .block-adjust-ctrl{display:flex; align-items:center; gap:8px; flex-shrink: 0;} /* 버튼 그룹은 절대 줄어들지 않음 */
         .block-btn{width:34px; height:30px; border-radius:8px; border:2px solid rgba(0,0,0,0.18); background:rgba(255,255,255,0.5); font-weight:900; cursor:pointer; font-size:14px; line-height:1;}
         .block-btn:hover{border-color: var(--blue); box-shadow:0 2px 5px rgba(0,0,0,0.06); transform: translateY(-1px);}
         .block-step{width:70px; padding:6px 8px; border-radius:8px; border:2px solid rgba(0,0,0,0.18); background:rgba(255,255,255,0.55); font-weight:900; text-align:center;}
@@ -191,7 +191,7 @@
 
 
 <div id="setBoard">
-    <div class="sync-row"><span class="sync-label">처방세트</span><span id="setFileStatus" class="sync-val">-</span><span class="ver-tag">v0.0.0.3</span></div>
+    <div class="sync-row"><span class="sync-label">처방세트</span><span id="setFileStatus" class="sync-val">-</span><span class="ver-tag">v0.0.0.4</span></div>
     <select id="setFileSel" onchange="changeSetFile()">
         <option value="">로딩중...</option>
     </select>
@@ -249,11 +249,11 @@
                         <tr>
                             <th>처방코드</th>
                             <th>처방명칭</th>
-                            <th style="text-align:right;">단가</th>
-                            <th style="text-align:center;">수량</th>
-                            <th style="text-align:center;">구분</th>
-                            <th style="text-align:center;">유지</th>
-                            <th style="text-align:center;">삭제</th>
+                            <th>단가</th>
+                            <th>수량</th>
+                            <th>구분</th>
+                            <th>유지</th>
+                            <th>삭제</th>
                         </tr>
                     </thead>
                     <tbody id="itemList"></tbody>
@@ -1145,8 +1145,14 @@ function refreshSetCodes() {
     }
 
     function renderItems() {
+        // [수정 v0.0.0.4] 초기화 먼저 수행 (잔상 방지)
+        const tbody = document.getElementById('itemList');
+        tbody.innerHTML = '';
+        renderBlockAdjuster(); // 빈 상태로 갱신
+
         const key = document.getElementById('setSel').value;
-        if(!key) return;
+        if(!key) return; // 세트 선택 안됨 -> 여기서 종료 (화면은 이미 비워짐)
+
         let set = DB.sets[key];
         set = normalizeSet(set);
         DB.sets[key] = set;
@@ -1169,10 +1175,6 @@ function refreshSetCodes() {
         } else {
             diagSection.style.display = 'none';
         }
-
-        const tbody = document.getElementById('itemList');
-        tbody.innerHTML = '';
-        
         
         if(currentConsult !== "none") {
             const consultCode = currentConsult === 'first' ? "AA154" : "AA254";
@@ -1453,7 +1455,7 @@ function refreshSetCodes() {
 
             html += `
             <div class="block-adjust-row">
-                <div class="block-adjust-label" style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${label} <span style="font-size:0.9em; margin-left:4px;">${name}</span></div>
+                <div class="block-adjust-label" title="${name.replace(/<[^>]*>/g,'')}">${label} <span style="font-size:0.9em; margin-left:4px;">${name}</span></div>
                 <div class="block-adjust-ctrl">
                     <button class="block-btn" ${btnDisabled} onclick="adjustBlockByIndex(${i}, -1)">−</button>
                     <input id="blockStep_${i}" class="block-step" type="number" value="0.25" step="0.05" ${btnDisabled}>
