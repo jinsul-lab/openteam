@@ -99,6 +99,122 @@
         .block-btn{width:34px; height:30px; border-radius:8px; border:2px solid rgba(0,0,0,0.18); background:rgba(255,255,255,0.5); font-weight:900; cursor:pointer; font-size:14px; line-height:1;}
         .block-btn:hover{border-color: var(--blue); box-shadow:0 2px 5px rgba(0,0,0,0.06); transform: translateY(-1px);}
         .block-step{width:70px; padding:6px 8px; border-radius:8px; border:2px solid rgba(0,0,0,0.18); background:rgba(255,255,255,0.55); font-weight:900; text-align:center;}
+    
+        /* [ADD] 금액설정 수동 모드 강조 */
+        .amount-mode-badge{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;font-weight:900;font-size:12px;border:2px solid rgba(0,0,0,0.18);background:rgba(255,255,255,0.35);}
+        .amount-mode-badge.manual{border-color: var(--accent); background: rgba(255,240,241,0.85); color: var(--accent); box-shadow: 0 6px 18px rgba(215,58,73,0.12);}
+        .amount-mode-badge.manual input{accent-color: var(--accent);}
+
+    
+        /* [ADD] 진찰료 선택 버튼 */
+        .pill-btn{
+            padding:8px 12px;border-radius:999px;border:2px solid rgba(0,0,0,0.18);
+            background:rgba(255,255,255,0.55);font-weight:900;cursor:pointer;user-select:none;
+        }
+        .pill-btn.active{
+            border-color: var(--primary); background: var(--primary); color:#fff;
+        }
+        .pill-btn.pill-secondary.active{
+            border-color: var(--accent); background: var(--accent); color:#fff;
+        }
+
+    
+        /* [FINAL] 진찰료 세그먼트 */
+        .segmented{
+            display:inline-flex;
+            border:2px solid rgba(0,0,0,0.18);
+            border-radius:999px;
+            overflow:hidden;
+            background:rgba(255,255,255,0.55);
+        }
+        .segmented .seg-btn{
+            padding:8px 14px;
+            border:none;
+            background:transparent;
+            font-weight:900;
+            cursor:pointer;
+            color:#444;
+        }
+        .segmented .seg-btn:not(:last-child){
+            border-right:1px solid rgba(0,0,0,0.12);
+        }
+        .segmented .seg-btn.active{
+            background:var(--primary);
+            color:#fff;
+        }
+        .segmented .seg-btn.seg-accent.active{
+            background:var(--accent);
+            color:#fff;
+        }
+
+    
+        
+        /* [ADD] 진찰료 버튼(개별 테두리) */
+        .consult-btn{
+            padding:9px 14px;
+            border-radius:999px;
+            border:2px solid rgba(0,0,0,0.18);
+            background:rgba(255,255,255,0.55);
+            font-weight:900;
+            cursor:pointer;
+            user-select:none;
+            color:#333;
+            transition: transform 0.04s ease, box-shadow 0.12s ease, background 0.12s ease, border-color 0.12s ease;
+        }
+        .consult-btn:active{ transform: translateY(1px); }
+        .consult-btn.active{
+            background:var(--primary);
+            border-color:var(--primary);
+            color:#fff;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+        }
+        .consult-btn.consult-accent.active{
+            background:var(--accent);
+            border-color:var(--accent);
+            color:#fff;
+            box-shadow: 0 6px 18px rgba(215,58,73,0.14);
+        }
+        .consult-btn:disabled{
+            opacity:0.45;
+            cursor:not-allowed;
+            box-shadow:none;
+            transform:none;
+        }
+
+    
+        /* [OVERRIDE] 진찰료 버튼만 v17 스타일(임의추가 느낌) + 균등 */
+        .consult-pills{width:100%;}
+        .consult-pills .consult-btn{
+            flex:1 !important;
+            height:34px !important;
+            padding:0 14px !important;
+            border:2px solid var(--primary) !important;
+            border-radius:10px !important;
+            background:rgba(255,255,255,0.5) !important;
+            color:#111 !important;
+            font-weight:900 !important;
+            white-space:nowrap;
+        }
+        .consult-pills .consult-btn.active{
+            background:rgba(0,0,0,0.06) !important;
+            color:#111 !important;
+        }
+        /* 토/야/공 ON: 빨강 배경 + 흰 글씨 */
+        #btnSurcharge.active{
+            background: var(--accent) !important;
+            border-color: var(--accent) !important;
+            color:#fff !important;
+        }
+
+    
+        /* [OVERRIDE] 초진/재진 선택 시 목표가 버튼처럼 검정 활성 */
+        #btnConsultFirst.active,
+        #btnConsultFollow.active{
+            background:#111 !important;
+            border-color:#111 !important;
+            color:#fff !important;
+        }
+
     </style>
 </head>
 <body onclick="closeSearch(event)">
@@ -114,13 +230,20 @@
 <header><img src="https://raw.githubusercontent.com/jinsul-lab/openteam/main/jinsul-logo.png" class="top-logo"></header>
 <div class="container">
     <div class="main-column">
-        <div class="card">
-            <div class="section-title">진찰료 산정</div>
-            <div class="consult-group">
-                <button onclick="setConsult('first')" id="btn-first" class="c-btn">초진</button>
-                <button onclick="setConsult('follow')" id="btn-follow" class="c-btn">재진</button>
-                <button onclick="setConsult('none')" id="btn-none" class="c-btn active">산정 안함</button>
+        
+<div class="card">
+            <div class="section-title" style="display:flex;justify-content:space-between;align-items:center;">
+                <span>진찰료</span>
             </div>
+
+            <div class="consult-pills" style="display:flex;gap:8px;align-items:center;margin-bottom:12px;">
+                <button type="button" id="btnConsultNone" onclick="setConsultMode('none')" class="consult-btn">산정안함</button>
+                <button type="button" id="btnConsultFirst" onclick="setConsultMode('first')" class="consult-btn">초진진찰료</button>
+                <button type="button" id="btnConsultFollow" onclick="setConsultMode('follow')" class="consult-btn">재진진찰료</button>
+                <button type="button" id="btnSurcharge" onclick="toggleSurcharge()" class="consult-btn consult-accent">토/야/공</button>
+            </div>
+
+
             <div class="section-title">코드 선택</div>
             <div class="set-selector-group">
                 <select id="setSel" onchange="changeSet()"></select>
@@ -128,12 +251,12 @@
                 <label class="inj-only-toggle" title="차단술/수팽/관절조영 등 주사 세트만 표시"><input type="checkbox" id="injOnlyToggle" onchange="toggleInjectionOnly()"> 주사만</label>
             </div>
             <div id="dataView" style="display:none; margin-top:30px;">
-                <div class="section-title"><span>환자 증상 (C.C)</span><label class="switch"><input type="checkbox" id="ccSwitch" checked onchange="toggleCC()"><span class="slider"></span></label></div>
+                <div class="section-title"><span>환자 증상 (C.C)</span><label class="switch"><input type="checkbox" id="ccSwitch" onchange="toggleCC()"><span class="slider"></span></label></div>
                 <div id="ccContent" style="padding:15px; background:rgba(0,0,0,0.05); border-radius:8px; font-size:0.95em; line-height:1.6; margin-bottom:30px; border-left: 0px solid #999; min-height:20px; font-weight: 600;"></div>
                 <div id="diagSection" style="display:none;"><div class="section-title" style="border-left-color: var(--blue); color:var(--blue); cursor: default;">상병 내역</div><table class="diag-table"><thead><tr><th style="width:20%">상병코드</th><th>상병명칭</th></tr></thead><tbody id="diagList"></tbody></table></div>
                 <div class="section-title" style="cursor: default;">처방 내역 / 비급여 조정</div>
                 <div id="mainAlertBox" class="alert-box"></div>
-                <table><thead><tr><th>처방코드</th><th>처방명칭</th><th>단가</th><th>수량</th><th>구분</th><th>유지</th><th>삭제</th></tr></thead><tbody id="itemList"></tbody></table>
+                <table><thead><tr><th>처방코드</th><th>처방명칭</th><th>단가</th><th>투여량</th><th>구분</th><th>유지</th><th>삭제</th></tr></thead><tbody id="itemList"></tbody></table>
                 <div style="margin-top:20px; display:flex; gap:10px; position:relative;" id="searchBox">
                     <input type="text" id="searchInput" placeholder="명칭 또는 코드로 처방 검색" style="flex:1; padding:12px; border-radius:8px; border:2px solid rgba(0,0,0,0.2); font-weight:800; outline:none; font-size: 13px; background: rgba(255,255,255,0.3);" oninput="searchLive(this.value, 'main', this)" onkeydown="if(event.key==='Escape') clearSearch()">
                     <button onclick="addManualItem()" style="padding:0 20px; background:rgba(255,255,255,0.5); border:2px solid var(--primary); border-radius:8px; font-weight:800; cursor:pointer; font-size:12px;">+ 임의 추가</button>
@@ -143,14 +266,27 @@
         </div>
     </div>
     <div class="side-column">
-        <div class="card" style="background: rgba(255, 255, 255, 0.1); text-align: center; padding: 30px 20px;"><div style="font-size: 0.85em; color: #666; margin-bottom: 10px; font-weight: 800; letter-spacing: 1px;">목표가</div><div><input type="number" id="tAmt" class="target-input" value="89000" oninput="autoBalance()"> <span style="font-size: 1.2em; font-weight: 900;">원</span></div></div>
+        
+<div class="card" style="background: rgba(255, 255, 255, 0.1); text-align: center; padding: 30px 20px;">
+    <div style="font-size:12px;font-weight:900;color:#666;margin-bottom:8px;">금액 기준</div>
+    <div id="amountModeButtons" style="display:flex;gap:8px;justify-content:center;margin-bottom:14px;">
+        <button type="button" id="btnAmountAuto" onclick="setAmountMode('auto')" 
+            style="flex:1;padding:8px 10px;border-radius:999px;border:2px solid var(--primary);background:var(--primary);color:#fff;font-weight:900;cursor:pointer;">
+            목표가대로 설정
+        </button>
+        <button type="button" id="btnAmountManual" onclick="setAmountMode('manual')" 
+            style="flex:1;padding:8px 10px;border-radius:999px;border:2px solid rgba(0,0,0,0.25);background:rgba(255,255,255,0.6);font-weight:900;cursor:pointer;">
+            처방 값대로 설정
+        </button>
+    </div>
+<div style="font-size: 0.85em; color: #666; margin-bottom: 10px; font-weight: 800; letter-spacing: 1px;">목표가</div><div><input type="number" id="tAmt" class="target-input" value="89000" oninput="autoBalance()"> <span style="font-size: 1.2em; font-weight: 900;">원</span></div></div>
         <div class="card" style="border-top: 6px solid var(--primary);">
             <div class="summary-row"><span class="summary-label">총 진료비 합계</span><span id="totalFull" class="summary-val">0</span></div>
             <div class="summary-row"><span class="summary-label">급여 (본인부담 30%)</span><span id="summaryBenefit" class="summary-val">0</span></div>
             <div class="summary-row" style="border-bottom:none;"><span class="summary-label">비급여 (100% 전액)</span><span id="summaryNonBenefit" class="summary-val" style="color:var(--blue);">0</span></div>
             <div style="text-align: center; margin-top: 25px; padding-top: 20px; border-top: 2px solid rgba(0,0,0,0.1);"><div style="font-size: 12px; color: #777; font-weight: 800; margin-bottom: 8px;">최종 실제 수납액</div><div id="finalPay">0</div></div>
             <div id="blockAdjustWrap" style="margin-top:25px; text-align:left; border-top: 1px dashed rgba(0,0,0,0.1); padding-top: 20px;"></div>
-            <div class="section-title" style="margin-top:40px; border-left-color: var(--blue);">금액별 수량 조정</div>
+            <div class="section-title" style="margin-top:40px; border-left-color: var(--blue);">금액별 투여량 조정</div>
             <div id="matrixAdjustName" style="font-size:11px; color:var(--blue); font-weight:800; margin-bottom:10px; text-align:right;">-</div>
             <div id="matrixTable" class="matrix-container"></div>
         </div>
@@ -163,14 +299,89 @@
     let DB = LOCAL_DATA;
     let flatDB = [];
     let carryOverItems = new Map();
-    let currentCustomItems = []; 
+    
+    // 투여량/단가 수동 수정값 유지(세트 항목)
+    let SET_OVERRIDES = new Map(); // code -> {price, q}
+let currentCustomItems = []; 
     let deletedSetItems = new Set();
     const STRATEGY_DRUGS = ["비엠히루니다제", "말린다주", "리포라제주"];
     const CONTRAST_REQUIRED_CODES = ["LA354", "LA359", "LA253", "LA355", "LA352", "HA280", "MM410"];
     const CONTRAST_KEYWORDS = ["OMNI", "VISI", "IOP", "HEX", "BONO", "CONTRAST", "옴니", "울트라", "가도", "파미", "비지", "이오", "헥사", "보노", "도타", "게네", "센스", "파큐", "유니", "마그네", "클라리"];
     let CONSULT_PRICES = { first: 0, follow: 0 };
     let currentConsult = "none";
-    let activeInputEl = null;
+    // [진찰료 드롭다운 + 금액설정 모드]
+    let AMOUNT_MODE = "auto"; // auto | manual
+    let consultMode = "follow"; // none | first | follow
+    let isSurcharge = false; // 토/야/공
+    function setAmountMode(mode){
+        AMOUNT_MODE = mode;
+
+        // 목표가대로 설정(auto) vs 처방 값대로 설정(manual)
+        const t=document.getElementById('tAmt');
+        if(t) t.disabled = (mode==='manual');
+
+        const ba=document.getElementById('btnAmountAuto');
+        const bm=document.getElementById('btnAmountManual');
+        if(ba && bm){
+            if(mode==='auto'){
+                ba.style.background='var(--primary)';
+                ba.style.color='#fff';
+                ba.style.borderColor='var(--primary)';
+                bm.style.background='rgba(255,255,255,0.6)';
+                bm.style.color='#333';
+                bm.style.borderColor='rgba(0,0,0,0.25)';
+            }else{
+                bm.style.background='var(--accent)';
+                bm.style.color='#fff';
+                bm.style.borderColor='var(--accent)';
+                ba.style.background='rgba(255,255,255,0.6)';
+                ba.style.color='#333';
+                ba.style.borderColor='rgba(0,0,0,0.25)';
+            }
+        }
+
+        autoBalance();
+    }
+
+    // [ADD] 진찰료 선택
+    
+    function syncConsultButtons(){
+        const bNone=document.getElementById('btnConsultNone');
+        const bFirst=document.getElementById('btnConsultFirst');
+        const bFollow=document.getElementById('btnConsultFollow');
+        const bSur=document.getElementById('btnSurcharge');
+
+        if(bNone) bNone.classList.toggle('active', consultMode==='none');
+        if(bFirst) bFirst.classList.toggle('active', consultMode==='first');
+        if(bFollow) bFollow.classList.toggle('active', consultMode==='follow');
+
+        if(bSur){
+            bSur.classList.toggle('active', isSurcharge);
+            bSur.disabled = (consultMode==='none');
+            bSur.style.opacity = (consultMode==='none') ? '0.45' : '1';
+            bSur.style.cursor = (consultMode==='none') ? 'not-allowed' : 'pointer';
+        }
+    }
+
+
+    function setConsultMode(mode){
+        consultMode = mode;
+        if(consultMode==='none'){ isSurcharge = false; }
+        syncConsultButtons();
+        renderItems();
+    }
+
+    function toggleSurcharge(){
+        if(consultMode==='none') return;
+        isSurcharge = !isSurcharge;
+        syncConsultButtons();
+        renderItems();
+    }
+
+
+    
+// 토요일은 '기본 진찰료 + 토요일 가산' 2줄로 반영
+let activeInputEl = null;
     const fmt = n => Math.floor(n || 0).toLocaleString();
     const clean = n => parseFloat(String(n).replace(/,/g, '')) || 0;
 
@@ -203,7 +414,7 @@
     function refreshSetCodes(){ const s=document.getElementById('setSel'); if(!s)return; const pv=s.value; if(!DB.sets||Object.keys(DB.sets).length===0){ s.innerHTML='<option value="">-- 처방 코드를 선택하세요 --</option>'; return; } computeSetMeta(); let k=Object.keys(DB.sets); if(INJ_ONLY) k=k.filter(x=>SET_META[x]&&SET_META[x].isInj); k.sort((a,b)=>(SET_META[a]?.sortKey||a).localeCompare(SET_META[b]?.sortKey||b)); const bp={}; k.forEach(x=>{ const p=SET_META[x]?.part||"기타"; (bp[p]||=[]).push(x); }); const o=PART_ORDER.filter(p=>bp[p]&&bp[p].length); let h='<option value="">-- 처방 코드를 선택하세요 --</option>'; o.forEach(p=>{ h+=`<option value="" disabled>── ${p} ──</option>`; bp[p].forEach(x=>{ h+=`<option value="${x}">${SET_META[x]?.label||""}</option>`; }); }); const r=k.filter(x=>!o.includes(SET_META[x]?.part||"기타")); if(r.length){ h+=`<option value="" disabled>── 기타 ──</option>`; r.forEach(x=>{ h+=`<option value="${x}">${SET_META[x]?.label||""}</option>`; }); } s.innerHTML=h; if(pv&&DB.sets[pv])s.value=pv; }
     
     let CURRENT_SET_FILE = "";
-    async function changeSetFile() { const s=document.getElementById('setFileSel'); const f=s?s.value:""; if(!f)return; try{ document.getElementById('setFileStatus').innerText="로딩..."; const r=await fetchJsonFromGithub(f); const d=unwrapData(r); DB.sets=(d&&typeof d==='object')?d:{}; CURRENT_SET_FILE=f; document.getElementById('setFileStatus').innerText=setFileDisplayName(f)+` (${Object.keys(DB.sets).length}개)`; computeSetMeta(); refreshSetCodes(); document.getElementById('setSel').value=""; document.getElementById('dataView').style.display='none'; currentCustomItems=[]; deletedSetItems.clear(); document.getElementById('ccSwitch').checked=true; document.getElementById('ccContent').style.display='block'; }catch(e){ console.error(e); document.getElementById('setFileStatus').innerText="로드 실패"; DB.sets={}; refreshSetCodes(); } }
+    async function changeSetFile() { const s=document.getElementById('setFileSel'); const f=s?s.value:""; if(!f)return; try{ document.getElementById('setFileStatus').innerText="로딩..."; const r=await fetchJsonFromGithub(f); const d=unwrapData(r); DB.sets=(d&&typeof d==='object')?d:{}; CURRENT_SET_FILE=f; document.getElementById('setFileStatus').innerText=setFileDisplayName(f)+` (${Object.keys(DB.sets).length}개)`; computeSetMeta(); refreshSetCodes(); document.getElementById('setSel').value=""; document.getElementById('dataView').style.display='none'; currentCustomItems=[]; deletedSetItems.clear(); document.getElementById('ccSwitch').checked=false; document.getElementById('ccContent').style.display='none'; }catch(e){ console.error(e); document.getElementById('setFileStatus').innerText="로드 실패"; DB.sets={}; refreshSetCodes(); } }
     function dbHasCode(c){ return !!((DB.fee&&DB.fee[c])||(DB.drug&&DB.drug[c])||(DB.mat&&DB.mat[c])); }
     function looksLikeCC(c,n){ c=(c||"").toString().trim(); n=(n||"").toString().trim(); if(!c&&!n)return true; if(/^\d+$/.test(c)&&c.length<=3)return true; if(/^\d+\.\s*/.test(n))return true; if(/^▼.*▼$/.test(n))return true; if(n.startsWith("*"))return true; if(n.endsWith(":"))return true; if(["PLAN","F/U","경과일","다음 주사일","주기치료사"].some(h=>n.toUpperCase().includes(h)))return true; return false; }
     function looksLikeDiagnosis(c,n){ if(dbHasCode(c))return false; if(!/^[A-Z]{1,2}\d{2,5}$/.test(c))return false; n=(n||"").toString(); if(["술","검사","촬영","초음파","주사","차단","도수","물리","치료","시술","테이핑","C-ARM","MRI","X-RAY","XRAY","Xray"].some(h=>n.includes(h)))return false; if(["주","mg","ml","g","tab","cap","정","캡슐","앰플","vial","바이알","브릭스","io","block"].some(h=>n.toUpperCase().includes(h.toUpperCase())))return false; return true; }
@@ -227,9 +438,7 @@
         }catch(e){} 
         if(d)DB.dates=d; 
         document.getElementById('st-date').innerText=DB.dates?.fee||"-"; 
-        const f1=getFeePrice('AA154')||17610; const f2=getFeePrice('AA254')||12590; CONSULT_PRICES={first:f1,follow:f2}; 
-        document.getElementById('btn-first').innerText=`초진 (${fmt(f1)})`; document.getElementById('btn-follow').innerText=`재진 (${fmt(f2)})`; 
-        flatDB=[]; ["fee","drug","mat"].forEach(k=>{ if(DB[k]) for(let c in DB[k]) flatDB.push({code:c,name:DB[k][c][0],price:DB[k][c][1]}); }); 
+        const f1=getFeePrice('AA154')||17610; const f2=getFeePrice('AA254')||12590; CONSULT_PRICES={first:f1,follow:f2};flatDB=[]; ["fee","drug","mat"].forEach(k=>{ if(DB[k]) for(let c in DB[k]) flatDB.push({code:c,name:DB[k][c][0],price:DB[k][c][1]}); }); 
         document.getElementById('st-db').innerText=fmt(flatDB.length)+"건"; 
         refreshSetCodes(); 
         const files=await listSetFiles(); 
@@ -243,6 +452,19 @@
                 await changeSetFile(); 
             } 
         } 
+    
+        // 기본값: 재진 · 평일 / 금액설정 자동
+        // amount mode handled by buttons
+
+        if(am){ am.checked=false; }
+        if(aml){ aml.innerText='금액설정 · 자동'; }
+        if(w){ w.classList.remove('manual'); }
+        const t=document.getElementById('tAmt');
+        if(t){ t.disabled=false; }
+        if(typeof setAmountMode==='function'){ setAmountMode('auto'); }
+        consultMode='follow';
+        isSurcharge=false;
+        if(typeof syncConsultButtons==='function'){ syncConsultButtons(); }
     }catch(e){console.error(e);} }
 
     function getFeePrice(c){ if(DB.fee&&DB.fee[c])return DB.fee[c][1]; if(DB.fee){ const k=Object.keys(DB.fee).find(x=>x.startsWith(c)); if(k)return DB.fee[k][1]; } return 0; }
@@ -252,14 +474,15 @@
         tbody.innerHTML = '';
         renderBlockAdjuster(); 
         const k=document.getElementById('setSel').value; if(!k)return; 
-        setConsult('follow'); 
+         
         let s=DB.sets[k]; s=normalizeSet(s); DB.sets[k]=s; 
         document.getElementById('dataView').style.display='block'; 
         document.getElementById('ccContent').innerHTML=(s.cc&&s.cc.length)?s.cc.join('<br>'):"등록된 증상 없음"; 
         const sw=document.getElementById('ccSwitch'); document.getElementById('ccContent').style.display=sw.checked?'block':'none'; 
+        
         renderItems(); 
     }
-    function setConsult(t){ currentConsult=t; document.querySelectorAll('.c-btn').forEach(b=>b.classList.remove('active')); document.getElementById('btn-'+t).classList.add('active'); computeSetMeta(); refreshSetCodes(); renderItems(); }
+    function setConsult(t){ if(t==='none') setConsultMode('none'); else if(t==='first') setConsultMode('first'); else if(t==='follow') setConsultMode('follow'); }
     function toggleCC(){ const b=document.getElementById('ccContent'); const s=document.getElementById('ccSwitch'); b.style.display=s.checked?'block':'none'; }
     function searchSets(v,e){ activeInputEl=e; const l=document.getElementById('globalSearchLayer'); if(!v||v.length<1){l.style.display='none';return;} computeSetMeta(); const r=e.getBoundingClientRect(); l.style.top=(r.bottom+window.scrollY+5)+'px'; l.style.left=(r.left+window.scrollX)+'px'; l.style.width=Math.max(300,r.width)+'px'; const q=v.toUpperCase(); let k=Object.keys(DB.sets || {}); if(INJ_ONLY)k=k.filter(x=>SET_META[x]&&SET_META[x].isInj); const f=k.filter(x=>SET_META[x]?.search.includes(q)).slice(0,40); l.innerHTML=f.map(x=>`<div class="search-item" onclick="selectSetFromSearch('${x}')"><span style="color:#0052cc; font-weight:900;">${SET_META[x]?.label||""}</span></div>`).join(''); l.style.display=f.length?'block':'none'; }
     function selectSetFromSearch(k){ document.getElementById('setSel').value=k; document.getElementById('setSearchInput').value=''; clearSearch(); changeSet(); }
@@ -269,18 +492,87 @@
     function closeSearch(e){ if(!e.target.closest('#searchBox')&&!e.target.closest('.input-wrapper')&&!e.target.closest('.set-selector-group')&&!e.target.closest('.search-dropdown')) clearSearch(); }
     function addSearchedItem(c,n,p){ let fp=p; if(STRATEGY_DRUGS.some(d=>n.includes(d)))fp=100000; currentCustomItems.push({code:c,name:n,price:fp,q:1,nb:false,lock:false,isManual:false}); clearSearch(); document.getElementById('searchInput').value=''; renderItems(); }
     function addManualItem(){ currentCustomItems.push({code:"ETC",name:"임의 항목",price:0,q:1,nb:false,lock:false,isManual:true}); renderItems(); }
-    function renderItems(){ const t=document.getElementById('itemList'); t.innerHTML=''; renderBlockAdjuster(); const k=document.getElementById('setSel').value; if(!k)return; let s=DB.sets[k]; s=normalizeSet(s); DB.sets[k]=s; const dgl=s.dg||[]; const dgs=document.getElementById('diagSection'); const dgt=document.getElementById('diagList'); dgt.innerHTML=''; if(dgl.length>0){ dgs.style.display='block'; dgl.forEach(d=>{ const tr=document.createElement('tr'); tr.innerHTML=`<td class="diag-code">${d.c}</td><td>${d.n}</td>`; dgt.appendChild(tr); }); }else{ dgs.style.display='none'; } if(currentConsult!=="none"){ const cc=(currentConsult==='first')?"AA154":"AA254"; const dp=getFeePrice(cc); const p=dp||CONSULT_PRICES[currentConsult]||0; const dn=(DB.fee&&DB.fee[cc]&&DB.fee[cc][0])?DB.fee[cc][0]:null; const n=dn||((currentConsult==='first')?"진찰료(초진)":"진찰료(재진)"); const u=dp?cc:"CONST"; addRow(t,u,n,p,1,false,true,false); } s.it.forEach(i=>{ const c=i.c.toUpperCase(); if(deletedSetItems.has(c))return; if(carryOverItems.has(c)){ const v=carryOverItems.get(c); addRow(t,c,v.name,v.price,v.q,v.nb,v.lock,true); }else{ const info=DB.fee[c]||DB.drug[c]||DB.mat[c]||null; let n=info?info[0]:(i.n||c); let p=info?info[1]:0; if(STRATEGY_DRUGS.some(d=>n.includes(d)))p=100000; addRow(t,c,n,p,i.q,i.nb,!i.nb||c.includes('SONO')||c.includes('C-ARM'),false); } }); currentCustomItems.forEach((i,x)=>{ if(carryOverItems.has(i.code))return; if(i.isDeleted)return; addRow(t,i.code,i.name,i.price,i.q,i.nb,i.lock,false,true,x); }); carryOverItems.forEach((v,c)=>{ const e=Array.from(t.rows).some(r=>r.cells[0].innerText===c); if(!e) addRow(t,c,v.name,v.price,v.q,v.nb,v.lock,true); }); autoBalance(); renderBlockAdjuster(); }
+    function renderItems(){ const t=document.getElementById('itemList'); t.innerHTML=''; renderBlockAdjuster(); const k=document.getElementById('setSel').value; if(!k)return; let s=DB.sets[k]; s=normalizeSet(s); DB.sets[k]=s; const dgl=s.dg||[]; const dgs=document.getElementById('diagSection'); const dgt=document.getElementById('diagList'); dgt.innerHTML=''; if(dgl.length>0){ dgs.style.display='block'; dgl.forEach(d=>{ const tr=document.createElement('tr'); tr.innerHTML=`<td class="diag-code">${d.c}</td><td>${d.n}</td>`; dgt.appendChild(tr); }); }else{ dgs.style.display='none'; } if(consultMode!=="none"){
+            const baseCode = (consultMode==="first") ? "AA154" : "AA254";
+
+            const bp = getFeePrice(baseCode) || 0;
+            const bn = (DB.fee && DB.fee[baseCode] && DB.fee[baseCode][0]) ? DB.fee[baseCode][0] : "진찰료";
+            addRow(t, baseCode, bn, bp, 1, false, true, false);
+
+            if(isSurcharge){
+                const addCode = (consultMode==="first") ? "AA154030" : "AA254030";
+                const ap = getFeePrice(addCode) || 0;
+                const an = (DB.fee && DB.fee[addCode] && DB.fee[addCode][0]) ? DB.fee[addCode][0] : "진찰료 가산";
+                addRow(t, addCode, an, ap, 1, false, true, false);
+            }
+        } s.it.forEach(i=>{ const c=i.c.toUpperCase(); if(deletedSetItems.has(c))return; if(carryOverItems.has(c)){ const v=carryOverItems.get(c); addRow(t,c,v.name,v.price,v.q,v.nb,v.lock,true); }else{
+                const info=DB.fee[c]||DB.drug[c]||DB.mat[c]||null;
+                let n=info?info[0]:(i.n||c);
+                let p=info?info[1]:0;
+                if(STRATEGY_DRUGS.some(d=>n.includes(d)))p=100000;
+
+                // 사용자가 수정한 단가/투여량이 있으면 우선 적용
+                const ov = SET_OVERRIDES.get(c);
+                const qv = ov ? ov.q : i.q;
+                const pv = ov ? ov.price : p;
+
+                addRow(t,c,n,pv,qv,i.nb,!i.nb||c.includes('SONO')||c.includes('C-ARM'),false);
+            }
+        });
+        currentCustomItems.forEach((i,x)=>{ if(carryOverItems.has(i.code))return; if(i.isDeleted)return; addRow(t,i.code,i.name,i.price,i.q,i.nb,i.lock,false,true,x); }); carryOverItems.forEach((v,c)=>{ const e=Array.from(t.rows).some(r=>r.cells[0].innerText===c); if(!e) addRow(t,c,v.name,v.price,v.q,v.nb,v.lock,true); }); autoBalance(); renderBlockAdjuster(); }
     function addRow(t,c,n,p,q,nb,lk,cy,isC=false,idx=null){ const tr=document.createElement('tr'); tr.dataset.type=nb?'nb':'b'; tr.dataset.code=c; if(isC){tr.dataset.custom='true';tr.dataset.idx=idx;} let nh=`<div class="input-wrapper"><input class="box-input" value="${n}" oninput="searchLive(this.value,'cell',this)" onfocus="searchLive(this.value,'cell',this)">`; if(CONTRAST_REQUIRED_CODES.includes(c)||c.startsWith('HA')) nh+=`<span class="badge badge-req">조영필요</span>`; if(CONTRAST_KEYWORDS.some(k=>n.toUpperCase().includes(k))) nh+=`<span class="badge badge-con">조영제</span>`; nh+=`</div><div class="audit-msg" style="color:var(--accent);font-size:11px;font-weight:800;margin-top:2px;"></div>`; const b=`<button class="type-btn ${nb?'type-nb':'type-b'}" onclick="toggleType(this,'${c}',${isC},${idx})">${nb?'비급여':'급여'}</button>`; tr.innerHTML=`<td><div class="input-wrapper"><input class="box-input code-type" value="${c}" onchange="updateRowByCode(this,${isC},${idx})" oninput="searchLive(this.value,'cell',this)"></div></td><td>${nh}</td><td><input class="box-input-num p-input" value="${fmt(p)}" oninput="syncRow(this,'${c}',${isC},${idx})"></td><td><input class="box-input-num q-input" type="number" value="${q}" step="0.1" oninput="syncRow(this,'${c}',${isC},${idx})"></td><td>${b}</td><td><button class="carry-btn ${cy?'active':''}" onclick="toggleCarry(this,'${c}')">📌</button></td><td><button class="del-btn" onclick="deleteRow(this,'${c}',${isC},${idx})">🗑️</button></td>`; t.appendChild(tr); }
     function updateRowByCode(i,isC,idx){ const nc=i.value.toUpperCase(); const tr=i.closest('tr'); const f=flatDB.find(x=>x.code===nc); if(f){ tr.querySelector('.box-input:not(.code-type)').value=f.name; tr.querySelector('.p-input').value=fmt(f.price); tr.dataset.code=nc; if(isC&&idx!==null){ currentCustomItems[idx].code=nc; currentCustomItems[idx].name=f.name; currentCustomItems[idx].price=f.price; } } autoBalance(); renderBlockAdjuster(); }
     function toggleType(b,c,isC,idx){ const tr=b.closest('tr'); const n=b.innerText==='급여'; b.innerText=n?'비급여':'급여'; b.className=`type-btn ${n?'type-nb':'type-b'}`; tr.dataset.type=n?'nb':'b'; if(carryOverItems.has(c))carryOverItems.get(c).nb=n; if(isC&&idx!==null)currentCustomItems[idx].nb=n; autoBalance(); }
     function deleteRow(b,c,isC,idx){ if(carryOverItems.has(c))carryOverItems.delete(c); if(isC&&idx!==null){ currentCustomItems.splice(idx,1); }else{ deletedSetItems.add(c); } renderItems(); }
-    function syncRow(e,c,isC,idx){ const tr=e.closest('tr'); const p=clean(tr.querySelector('.p-input').value); const q=parseFloat(tr.querySelector('.q-input').value)||0; if(carryOverItems.has(c)){ const v=carryOverItems.get(c); v.price=p; v.q=q; } if(isC&&idx!==null){ currentCustomItems[idx].price=p; currentCustomItems[idx].q=q; } if(e.classList.contains('p-input'))e.value=fmt(p); autoBalance(); }
-    function toggleCarry(b,c){ const tr=b.closest('tr'); b.classList.toggle('active'); const cc=tr.querySelector('.box-input.code-type').value; if(b.classList.contains('active')){ carryOverItems.set(cc,{name:tr.querySelector('.box-input:not(.code-type)').value, price:clean(tr.querySelector('.p-input').value), q:parseFloat(tr.querySelector('.q-input').value)||0, nb:tr.dataset.type==='nb', lock:false}); }else{ carryOverItems.delete(c); } }
+    function syncRow(e,c,isC,idx){
+        const tr=e.closest('tr');
+        const p=clean(tr.querySelector('.p-input').value);
+        const q=parseFloat(tr.querySelector('.q-input').value)||0;
+
+        if(carryOverItems.has(c)){
+            const v=carryOverItems.get(c);
+            v.price=p; v.q=q;
+        }else if(isC && idx!==null){
+            currentCustomItems[idx].price=p;
+            currentCustomItems[idx].q=q;
+        }else{
+            // 세트 기본 항목도 사용자가 수정한 값 유지
+            SET_OVERRIDES.set(c, {price:p, q:q});
+        }
+
+        if(e.classList.contains('p-input')) e.value=fmt(p);
+        autoBalance();
+    }
+    function toggleCarry(b,c){
+        const tr=b.closest('tr');
+        b.classList.toggle('active');
+        const cc=tr.querySelector('.box-input.code-type').value;
+
+        if(b.classList.contains('active')){
+            // 고정하면 carryOverItems가 기준이므로 override는 제거
+            SET_OVERRIDES.delete(cc);
+
+            carryOverItems.set(cc,{
+                name:tr.querySelector('.box-input:not(.code-type)').value,
+                price:clean(tr.querySelector('.p-input').value),
+                q:parseFloat(tr.querySelector('.q-input').value)||0,
+                nb:tr.dataset.type==='nb',
+                lock:false
+            });
+        }else{
+            // 고정 해제 시 현재 값은 override로 유지
+            SET_OVERRIDES.set(cc,{
+                price:clean(tr.querySelector('.p-input').value),
+                q:parseFloat(tr.querySelector('.q-input').value)||0
+            });
+            carryOverItems.delete(c);
+        }
+    }
     function calc(){ let b=0,n=0,ls=0; let hc=false; let nc=null; document.querySelectorAll('#itemList tr').forEach(r=>{ const nm=r.querySelector('.box-input:not(.code-type)').value.toUpperCase(); if(CONTRAST_KEYWORDS.some(k=>nm.includes(k)))hc=true; }); document.querySelectorAll('#itemList tr').forEach(r=>{ const c=r.querySelector('.box-input.code-type').value.toUpperCase(); const p=clean(r.querySelector('.p-input').value); const q=parseFloat(r.querySelector('.q-input').value)||0; const m=r.querySelector('.audit-msg'); m.innerText=""; if(c.startsWith('LA')){ ls+=q; if(c==='LA357'&&q>1.5)m.innerText="⚠️ LA357 1.5 초과"; } if(CONTRAST_REQUIRED_CODES.includes(c)&&!hc)nc=c; if(r.dataset.type==='b')b+=(p*q); else n+=(p*q); }); const ab=document.getElementById('mainAlertBox'); let al=[]; if(ls>3.0)al.push("⚠️ 차단술 총 합계가 3.0을 초과했습니다. (삭감 주의)"); if(nc)al.push("⚠️ 조영제가 누락되었습니다. (필수 시술 포함됨)"); if(al.length>0){ ab.innerHTML=al.join("<br>"); ab.style.display="block"; ab.className=ls>3.0?"alert-box alert-red":"alert-box alert-orange"; }else{ ab.style.display="none"; } const bp=Math.floor(Math.floor(b*0.3)/10)*10; return {totalFull:Math.floor(b+n),bPay:bp,nbSum:Math.floor(n),finalPay:Math.floor((bp+n)/10)*10}; }
-    function autoBalance(){ const t=clean(document.getElementById('tAmt').value); const rs=calc(); const rows=Array.from(document.querySelectorAll('#itemList tr')); let tr=rows.find(r=>r.dataset.type==='nb'&&STRATEGY_DRUGS.some(d=>r.querySelector('.box-input:not(.code-type)').value.includes(d))); if(!tr){ const rr=[...rows].reverse(); tr=rr.find(r=>r.dataset.type==='nb'); } if(tr){ const an=tr.querySelector('.box-input:not(.code-type)').value; document.getElementById('matrixAdjustName').innerText=`[조정: ${an}]`; let on=0; rows.forEach(r=>{ if(r!==tr&&r.dataset.type==='nb')on+=clean(r.querySelector('.p-input').value)*(parseFloat(r.querySelector('.q-input').value)||0); }); const pa=clean(tr.querySelector('.p-input').value); if(pa>0){ tr.querySelector('.q-input').value=((t-rs.bPay-on)/pa).toFixed(4); let mh=''; const bt=t%10000; const sp=Math.max(0,Math.floor(t/10000)*10000-50000); const ep=Math.floor(t/10000)*10000+20000; for(let i=sp;i<=ep;i+=10000){ const pt=i+bt; const qp=((pt-rs.bPay-on)/pa).toFixed(4); if(qp>=0){ const bs=(pt===t)?"background:#eef6ff; border-color:var(--blue);":""; mh+=`<div class="matrix-row" onclick="setTarget(${pt})" style="${bs}"><span class="matrix-target">${fmt(pt)}원</span><span class="matrix-val">수량 ${qp}</span></div>`; } } document.getElementById('matrixTable').innerHTML=mh; } } const f=calc(); document.getElementById('totalFull').innerText=fmt(f.totalFull); document.getElementById('summaryBenefit').innerText=fmt(f.bPay); document.getElementById('summaryNonBenefit').innerText=fmt(f.nbSum); document.getElementById('finalPay').innerText=fmt(f.finalPay); }
+    function autoBalance(){ const t=clean(document.getElementById('tAmt').value); const rs=calc(); const rows=Array.from(document.querySelectorAll('#itemList tr')); if(AMOUNT_MODE==='manual'){ const f=calc(); document.getElementById('totalFull').innerText=fmt(f.totalFull); document.getElementById('summaryBenefit').innerText=fmt(f.bPay); document.getElementById('summaryNonBenefit').innerText=fmt(f.nbSum); document.getElementById('finalPay').innerText=fmt(f.finalPay); return; } let tr=rows.find(r=>r.dataset.type==='nb'&&STRATEGY_DRUGS.some(d=>r.querySelector('.box-input:not(.code-type)').value.includes(d))); if(!tr){ const rr=[...rows].reverse(); tr=rr.find(r=>r.dataset.type==='nb'); } if(tr){ const an=tr.querySelector('.box-input:not(.code-type)').value; document.getElementById('matrixAdjustName').innerText=`[조정: ${an}]`; let on=0; rows.forEach(r=>{ if(r!==tr&&r.dataset.type==='nb')on+=clean(r.querySelector('.p-input').value)*(parseFloat(r.querySelector('.q-input').value)||0); }); const pa=clean(tr.querySelector('.p-input').value); if(pa>0){ tr.querySelector('.q-input').value=((t-rs.bPay-on)/pa).toFixed(4); let mh=''; const bt=t%10000; const sp=Math.max(0,Math.floor(t/10000)*10000-50000); const ep=Math.floor(t/10000)*10000+20000; for(let i=sp;i<=ep;i+=10000){ const pt=i+bt; const qp=((pt-rs.bPay-on)/pa).toFixed(4); if(qp>=0){ const bs=(pt===t)?"background:#eef6ff; border-color:var(--blue);":""; mh+=`<div class="matrix-row" onclick="setTarget(${pt})" style="${bs}"><span class="matrix-target">${fmt(pt)}원</span><span class="matrix-val">투여량 ${qp}</span></div>`; } } document.getElementById('matrixTable').innerHTML=mh; } } const f=calc(); document.getElementById('totalFull').innerText=fmt(f.totalFull); document.getElementById('summaryBenefit').innerText=fmt(f.bPay); document.getElementById('summaryNonBenefit').innerText=fmt(f.nbSum); document.getElementById('finalPay').innerText=fmt(f.finalPay); }
     window.onload=init;
     function getLArows(){ return Array.from(document.querySelectorAll('#itemList tr')).filter(r=>{ const c=(r.dataset.code||'').toUpperCase(); const i=r.querySelector('.box-input.code-type').value.toUpperCase(); return c.startsWith('LA')||i.startsWith('LA'); }); }
-    function renderBlockAdjuster(){ const l=getLArows(); const c=l.length; const dc=Math.max(3,c); let h='<div class="section-title" style="border-left-color: var(--blue);">차단술 수량 조정</div>'; for(let i=0;i<dc;i++){ const e=(i<c); let lb=`${i+1}차단술`; let nm=""; let dis=""; if(e){ const tr=l[i]; const rn=tr.querySelector('.box-input:not(.code-type)').value; nm=`(${rn})`; }else{ nm=`<span style="color:#aaa;font-weight:normal;">(없음)</span>`; dis="disabled style='opacity:0.3;cursor:default;'"; } h+=`<div class="block-adjust-row"><div class="block-adjust-label" title="${nm.replace(/<[^>]*>/g,'')}">${lb} <span style="font-size:0.9em;margin-left:4px;">${nm}</span></div><div class="block-adjust-ctrl"><button class="block-btn" ${dis} onclick="adjustBlockByIndex(${i},-1)">−</button><input id="blockStep_${i}" class="block-step" type="number" value="0.25" step="0.05" ${dis}><button class="block-btn" ${dis} onclick="adjustBlockByIndex(${i},+1)">＋</button></div></div>`; } document.getElementById('blockAdjustWrap').innerHTML=h; }
+    function renderBlockAdjuster(){ const l=getLArows(); const c=l.length; const dc=Math.max(3,c); let h='<div class="section-title" style="border-left-color: var(--blue);">차단술 투여량 조정</div>'; for(let i=0;i<dc;i++){ const e=(i<c); let lb=`${i+1}차단술`; let nm=""; let dis=""; if(e){ const tr=l[i]; const rn=tr.querySelector('.box-input:not(.code-type)').value; nm=`(${rn})`; }else{ nm=`<span style="color:#aaa;font-weight:normal;">(없음)</span>`; dis="disabled style='opacity:0.3;cursor:default;'"; } h+=`<div class="block-adjust-row"><div class="block-adjust-label" title="${nm.replace(/<[^>]*>/g,'')}">${lb} <span style="font-size:0.9em;margin-left:4px;">${nm}</span></div><div class="block-adjust-ctrl"><button class="block-btn" ${dis} onclick="adjustBlockByIndex(${i},-1)">−</button><input id="blockStep_${i}" class="block-step" type="number" value="0.25" step="0.05" ${dis}><button class="block-btn" ${dis} onclick="adjustBlockByIndex(${i},+1)">＋</button></div></div>`; } document.getElementById('blockAdjustWrap').innerHTML=h; }
     function adjustBlockByIndex(i,d){ const l=getLArows(); if(!l[i])return; const tr=l[i]; const c=(tr.dataset.code||'').toUpperCase(); const iv=tr.querySelector('.box-input.code-type').value.toUpperCase(); if(!c.startsWith('LA')&&!iv.startsWith('LA')) return; const se=document.getElementById(`blockStep_${i}`); const s=se?(parseFloat(se.value)||0):0; if(!s)return; const qe=tr.querySelector('.q-input'); if(!qe)return; const cur=parseFloat(qe.value)||0; let n=cur+(d*s); if(n<0)n=0; n=Math.round(n*100)/100; qe.value=n.toFixed(2).replace(/\.00$/,'\.0').replace(/(\.\d)0$/,'$1'); const isc=tr.dataset.custom==='true'; const idx=isc?parseInt(tr.dataset.idx,10):null; try{ syncRow(qe,c||iv,isc,idx); }catch(e){} }
 </script>
 </body>
